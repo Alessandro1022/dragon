@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import * as THREE from 'three'
 import { missionTarget } from '../missionTarget'
+import { focusPosition } from '../focus'
 
 const target = new THREE.Vector3()
 
@@ -17,7 +18,13 @@ export function MissionMarker() {
     ref.current.position.copy(t)
     ref.current.children[1].rotation.y = clock.elapsedTime * 1.4
     ref.current.children[1].position.y = 9 + Math.sin(clock.elapsedTime * 2) * 0.6
-    if (beam.current) (beam.current.material as THREE.MeshBasicMaterial).opacity = 0.16 + Math.sin(clock.elapsedTime * 2.5) * 0.05
+    // the beam guides from afar and fades away once you're there
+    const f = focusPosition()
+    const near = THREE.MathUtils.smoothstep(Math.hypot(f.x - t.x, f.z - t.z), 15, 60)
+    if (beam.current) {
+      ;(beam.current.material as THREE.MeshBasicMaterial).opacity = (0.16 + Math.sin(clock.elapsedTime * 2.5) * 0.05) * near
+      beam.current.visible = near > 0.01
+    }
   })
   return (
     <group ref={ref} visible={false}>

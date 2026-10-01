@@ -21,7 +21,9 @@ export function CameraRig() {
   const walkYaw = useRef(player.yaw)
 
   useFrame((_, rawDt) => {
-    const dt = Math.min(rawDt, 1 / 20)
+    // dev screenshots run at ~1 fps in software rendering: snap instead of easing
+    const snap = import.meta.env.DEV && (window as unknown as { __snapCam?: boolean }).__snapCam
+    const dt = snap ? 10 : Math.min(rawDt, 1 / 20)
     const cam = camera as THREE.PerspectiveCamera
     const s = useGame.getState()
     const playing = s.phase === 'playing'

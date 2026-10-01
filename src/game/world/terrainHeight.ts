@@ -61,8 +61,11 @@ function rawHeight(x: number, z: number): number {
   const hills = (fbm(x * 0.0016, z * 0.0016, 5) * 0.5 + 0.5) * 70
   const mountainMask = smoothstep(0.1, 0.55, n3(x * 0.0008 + 40, z * 0.0008 - 12) * 0.5 + 0.5)
   const mountains = ridged(x * 0.0021, z * 0.0021) * 340 * mountainMask
+  // fine crags on the mountains and gentle bumps underfoot
+  const crags = (1 - Math.abs(n2(x * 0.011, z * 0.011))) * 9 * mountainMask * mountainMask
+  const bumps = n1(x * 0.045, z * 0.045) * 0.7 + n3(x * 0.13, z * 0.13) * 0.18
 
-  return 6 + (hills + mountains) * land - (1 - land) * 55
+  return 6 + (hills + mountains + crags + bumps) * land - (1 - land) * 55
 }
 
 /** Ground or water surface, whichever is higher. */
