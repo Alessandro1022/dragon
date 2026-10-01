@@ -2,13 +2,17 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { terrainHeight, ISLAND_RADIUS } from './terrainHeight'
 import { NEST, TOWN, CAMP } from './worldSpots'
+import { useGame } from '../../store/gameStore'
 
 const COUNT = 2600
 
 /** Instanced low-poly pines — thousands of trees for a single draw call each. */
+const DENSITY = { low: 0.4, medium: 0.7, high: 1 }
+
 export function Forest() {
   const foliage = useRef<THREE.InstancedMesh>(null)
   const trunks = useRef<THREE.InstancedMesh>(null)
+  const quality = useGame((s) => s.settings.quality)
 
   const placements = useMemo(() => {
     const out: { x: number; y: number; z: number; s: number; r: number }[] = []
@@ -51,6 +55,13 @@ export function Forest() {
     if (foliage.current!.instanceColor) foliage.current!.instanceColor.needsUpdate = true
     trunks.current!.instanceMatrix.needsUpdate = true
   }, [placements])
+
+  // placements are shuffled, so drawing the first N thins the forest evenly
+  useLayoutEffect(() => {
+    const n = Math.floor(placements.length * DENSITY[quality])
+    foliage.current!.count = n
+    trunks.current!.count = n
+  }, [quality, placements])
 
   return (
     <group>

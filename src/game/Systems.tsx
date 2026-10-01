@@ -23,7 +23,7 @@ export function Systems() {
   const lastT = useRef(worldTime.t)
   useFrame((_, dt) => {
     const s = useGame.getState()
-    if (s.phase !== 'playing') return
+    if (s.phase !== 'playing' || s.panel === 'settings') return
     updatePrompt()
 
     // a new day dawns when the clock passes 06:00

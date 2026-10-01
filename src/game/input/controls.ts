@@ -39,6 +39,11 @@ export function readPitch() {
   return Math.max(-1, Math.min(1, input.pitch + input.touchPitch))
 }
 
+/** Flight pitch honours the "invert" setting; walking never inverts. */
+export function readFlightPitch() {
+  return useGame.getState().settings.invertPitch ? -readPitch() : readPitch()
+}
+
 export function readTurn() {
   return Math.max(-1, Math.min(1, input.turn + input.touchTurn))
 }
@@ -66,7 +71,7 @@ export function useKeyboard() {
         const g = useGame.getState()
         if (e.code === 'KeyE' && g.phase === 'playing' && !g.panel) performAction()
         if ((e.code === 'KeyI' || e.code === 'Tab') && g.phase === 'playing') g.openPanel(g.panel === 'dragons' ? null : 'dragons')
-        if (e.code === 'Escape' && g.panel) g.openPanel(null)
+        if (e.code === 'Escape' && g.phase === 'playing') g.openPanel(g.panel ? null : 'settings')
       }
       keys.add(e.code)
       recompute()

@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { readPitch, readTurn, readBoost, readFlap, readFire } from '../input/controls'
+import { readFlightPitch, readTurn, readBoost, readFlap, readFire } from '../input/controls'
 import { surfaceHeight, ISLAND_RADIUS } from '../world/terrainHeight'
 import { flight, FLIGHT } from './flightState'
 import { useGame, selectActive } from '../../store/gameStore'
@@ -21,6 +21,7 @@ export function useFlight() {
     const dt = Math.min(rawDt, 1 / 20)
     const s = useGame.getState()
     const playing = s.phase === 'playing'
+    if (s.panel === 'settings') return // paused
     if (playing && s.mode !== 'flying') {
       flight.firing = false
       return
@@ -32,7 +33,7 @@ export function useFlight() {
     const maxSpeed = FLIGHT.maxSpeed * mul.speed
     const cruise = FLIGHT.cruiseSpeed * mul.speed
 
-    let pitchIn = free ? readPitch() : 0
+    let pitchIn = free ? readFlightPitch() : 0
     const turnIn = playing ? (free ? readTurn() : 0) : 0.25 // gentle orbit on the menu screen
 
     // forced climb right after mounting

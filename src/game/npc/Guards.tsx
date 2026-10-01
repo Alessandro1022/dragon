@@ -133,7 +133,7 @@ export function Guards() {
     const dt = Math.min(rawDt, 1 / 20)
     const now = clock.elapsedTime
     const s = useGame.getState()
-    if (s.phase !== 'playing') return
+    if (s.phase !== 'playing' || s.panel === 'settings') return
 
     // --- crime: the royal hatchery ---
     if (s.royalEggDay !== s.day) {

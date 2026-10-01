@@ -4,7 +4,6 @@ import { performAction } from '../game/interaction'
 import { view } from '../systems/dragons'
 import { DragonPortrait, Icon } from './components'
 import { Minimap } from './Minimap'
-import { GoldChip } from './QuestPanel'
 import { objectiveText, missionTarget } from '../game/missionTarget'
 import { flight } from '../game/dragon/flightState'
 import { player } from '../game/player/playerState'
@@ -48,24 +47,24 @@ export function HUD() {
 }
 
 function TopRight() {
-  const inventory = useGame((s) => s.inventory)
   const openPanel = useGame((s) => s.openPanel)
   const hatchReady = useGame((s) => s.hatchReady)
-  const gold = useGame((s) => s.gold)
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="hidden sm:inline-flex">
-          <GoldChip amount={gold} />
+      <div className="flex items-center gap-2">
+        <span className="hidden sm:flex">
+          <Wallet />
         </span>
-        <div className="glass flex items-center gap-3 rounded-full px-3 py-1.5 text-sm font-semibold tabular-nums">
-          <span className="flex items-center gap-1">
-            <Icon name="berry" /> {inventory.berries}
-          </span>
-          <span className="flex items-center gap-1">
-            <Icon name="fish" /> {inventory.fish}
-          </span>
-        </div>
+        <button
+          onClick={() => openPanel('settings')}
+          className="glass pointer-events-auto grid h-10 w-10 place-items-center rounded-full text-white/80 transition active:scale-95"
+          aria-label="Paus och inställningar"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+            <rect x="6" y="5" width="4" height="14" rx="1" />
+            <rect x="14" y="5" width="4" height="14" rx="1" />
+          </svg>
+        </button>
         <button
           onClick={() => openPanel('dragons')}
           className="glass pointer-events-auto relative grid h-10 w-10 place-items-center rounded-full text-ember transition active:scale-95"
@@ -76,10 +75,29 @@ function TopRight() {
         </button>
       </div>
       <span className="sm:hidden">
-        <GoldChip amount={gold} />
+        <Wallet />
       </span>
       <WantedStars />
       <StaminaBar />
+    </div>
+  )
+}
+
+/** Gold, berries and fish in one compact pill. */
+function Wallet() {
+  const inventory = useGame((s) => s.inventory)
+  const gold = useGame((s) => s.gold)
+  return (
+    <div className="glass flex items-center gap-3 rounded-full px-3 py-1.5 text-sm font-semibold tabular-nums">
+      <span className="flex items-center gap-1 text-[#fde68a]">
+        <span className="h-3.5 w-3.5 rounded-full bg-gradient-to-b from-[#fde68a] to-[#d97706]" /> {gold}
+      </span>
+      <span className="flex items-center gap-1">
+        <Icon name="berry" /> {inventory.berries}
+      </span>
+      <span className="flex items-center gap-1">
+        <Icon name="fish" /> {inventory.fish}
+      </span>
     </div>
   )
 }
@@ -168,7 +186,7 @@ function CompanionCard() {
       <div className="glass flex items-center gap-3 rounded-2xl px-3 py-2">
         <Icon name="egg" className="h-6 w-6" />
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">Ägget i nästet</p>
+          <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">Ägget i nästet</p>
           <p className="text-sm font-semibold">{ready ? 'Redo att kläckas!' : `${Math.floor(egg.progress * 100)}% ruvat`}</p>
         </div>
       </div>

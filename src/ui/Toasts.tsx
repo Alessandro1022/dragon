@@ -4,7 +4,7 @@ import { useGame, type Toast } from '../store/gameStore'
 export function Toasts() {
   const toasts = useGame((s) => s.toasts)
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-20 z-40 flex flex-col items-center gap-2 px-4 sm:top-6">
+    <div className="pointer-events-none absolute inset-x-0 top-[34%] z-40 flex flex-col items-center gap-2 px-4 sm:top-20">
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} />
       ))}

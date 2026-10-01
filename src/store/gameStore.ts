@@ -23,12 +23,23 @@ import {
   breedCooldownLeft,
 } from '../systems/dragons'
 import { safeStorage } from '../lib/storage'
+import { initAudio } from '../audio/engine'
 import { MISSIONS, missionById, SHOP, type Counter } from '../systems/missions'
 import { randomGenome as rollGenome } from '../systems/genetics'
 
 type Phase = 'menu' | 'playing'
 export type Mode = 'walking' | 'flying'
-export type Panel = null | 'dragons' | 'nest' | 'quest'
+export type Panel = null | 'dragons' | 'nest' | 'quest' | 'settings'
+export type Quality = 'low' | 'medium' | 'high'
+
+export interface Settings {
+  quality: Quality
+  /** let the game lower quality automatically when the frame rate drops */
+  autoQuality: boolean
+  volume: number
+  music: boolean
+  invertPitch: boolean
+}
 
 export interface Prompt {
   label: string
@@ -77,6 +88,7 @@ interface GameState {
   completedMissions: string[]
   royalEggDay: number
   day: number
+  settings: Settings
 
   // actions
   start: () => void
@@ -111,6 +123,7 @@ interface GameState {
   buy: (itemId: string) => void
   busted: () => void
   newDay: () => void
+  updateSettings: (patch: Partial<Settings>) => void
   stealRoyalEgg: () => void
   resetProgress: () => void
 }
@@ -191,6 +204,7 @@ export const useGame = create<GameState>()(
         prompt: null,
         toasts: [],
         telemetry: { speed: 0, altitude: 0, stamina: 1, boosting: false },
+        settings: { quality: 'high', autoQuality: true, volume: 0.7, music: true, invertPitch: false },
         heat: 0,
         guardsClose: false,
         collected: [],
@@ -199,6 +213,7 @@ export const useGame = create<GameState>()(
         ...initialProgress(),
 
         start: () => {
+          initAudio()
           // dragon stands beside the nest, facing it; rider next to the nest
           const yaw = Math.atan2(-(NEST[0] - DRAGON_SPAWN[0]), -(NEST[2] - DRAGON_SPAWN[2]))
           parkAt(DRAGON_SPAWN[0], DRAGON_SPAWN[1], DRAGON_SPAWN[2], yaw)
@@ -473,6 +488,8 @@ export const useGame = create<GameState>()(
           s.addFood(item.kind, 1)
         },
 
+        updateSettings: (patch) => set((st) => ({ settings: { ...st.settings, ...patch } })),
+
         newDay: () => {
           set((st) => ({ day: st.day + 1 }))
           get().toast(`Dag ${get().day + 1} gryr över ön.`)
@@ -493,7 +510,9 @@ export const useGame = create<GameState>()(
           s.toast(`Drakgardet tog dig! Du förlorade ${lost} guld.`, 'warn')
         },
 
-        resetProgress: () => set({ ...initialProgress(), mode: 'walking', panel: null }),
+        resetProgress: () => {
+          set({ ...initialProgress(), mode: 'walking', panel: null, phase: 'menu' })
+        },
       }
     },
     {
@@ -516,6 +535,7 @@ export const useGame = create<GameState>()(
         completedMissions: s.completedMissions,
         royalEggDay: s.royalEggDay,
         day: s.day,
+        settings: s.settings,
       }),
       // older saves lack the newer fields — fill them from fresh defaults
       merge: (persisted, current) => ({ ...current, ...(persisted as object) }),
