@@ -2,16 +2,38 @@ import * as THREE from 'three'
 import { useGame } from '../store/gameStore'
 import { missionById } from '../systems/missions'
 import { COURSE } from './world/Rings'
-import { QUEST_GIVER, WILD_EGG_SPOTS, HATCHERY, CAMP } from './world/worldSpots'
+import { QUEST_GIVER, WILD_EGG_SPOTS, HATCHERY, CAMP, NEST } from './world/worldSpots'
 import { flight } from './dragon/flightState'
 import { player } from './player/playerState'
 import { heat } from './heat'
+
+/**
+ * First-session guidance when no mission is active: hatch the egg, then
+ * head to Draksten to meet Hedda. Disappears once the story has started.
+ */
+function guide(): { text: string; target: [number, number, number] | null } | null {
+  const s = useGame.getState()
+  if (s.activeMission || s.completedMissions.length > 0) return null
+  const hatched = s.dragons.length > 1
+  if (!hatched && s.nestEgg && s.mode === 'walking') {
+    return s.hatchReady
+      ? { text: 'Ägget spricker! Gå till nästet och kläck det', target: NEST }
+      : { text: 'Gå till nästet och värm ägget (E)', target: NEST }
+  }
+  return {
+    text: s.mode === 'walking' ? 'Kliv upp på draken och flyg till Draksten' : 'Flyg till Draksten och prata med Hedda',
+    target: QUEST_GIVER,
+  }
+}
 
 /** World position of the active mission's next objective, or null. */
 export function missionTarget(out: THREE.Vector3): THREE.Vector3 | null {
   const s = useGame.getState()
   const def = s.activeMission && missionById(s.activeMission.id)
-  if (!def) return null
+  if (!def) {
+    const g = guide()
+    return g?.target ? out.set(...g.target) : null
+  }
   switch (def.waypoint) {
     case 'ring': {
       const ring = COURSE[s.collected.length] ?? COURSE[0]
@@ -51,7 +73,7 @@ export function missionTarget(out: THREE.Vector3): THREE.Vector3 | null {
 export function objectiveText(): string | null {
   const s = useGame.getState()
   const def = s.activeMission && missionById(s.activeMission.id)
-  if (!def) return null
+  if (!def) return guide()?.text ?? null
   if (def.heatHint && heat.heist && heat.level > 0) return def.heatHint
   if (def.deliver?.fish) {
     return s.inventory.fish >= def.deliver.fish

@@ -152,7 +152,7 @@ function Objective() {
     const id = setInterval(tick, 250)
     return () => clearInterval(id)
   }, [active])
-  if (!active || !info.text) return null
+  if (!info.text) return null
   return (
     <div className="absolute left-1/2 top-[4.5rem] w-[min(92vw,26rem)] -translate-x-1/2 sm:top-5">
       <div className="glass flex items-center gap-3 rounded-2xl px-4 py-2.5">
