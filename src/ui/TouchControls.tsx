@@ -63,6 +63,7 @@ export function TouchControls() {
             {prompt.label}
           </button>
         )}
+        {flying && <HoldButton label="ELD" onChange={(v) => (input.touchFire = v)} fire />}
         <div className="flex items-end gap-3">
           <HoldButton label={flying ? 'FLAXA' : 'HOPPA'} onChange={(v) => (input.touchFlap = v)} />
           <HoldButton label={flying ? 'BOOST' : 'SPRINT'} onChange={(v) => (input.touchBoost = v)} accent />
@@ -72,7 +73,7 @@ export function TouchControls() {
   )
 }
 
-function HoldButton({ label, onChange, accent }: { label: string; onChange: (v: boolean) => void; accent?: boolean }) {
+function HoldButton({ label, onChange, accent, fire }: { label: string; onChange: (v: boolean) => void; accent?: boolean; fire?: boolean }) {
   const [down, setDown] = useState(false)
   const set = (v: boolean) => {
     setDown(v)
@@ -87,7 +88,11 @@ function HoldButton({ label, onChange, accent }: { label: string; onChange: (v: 
       onPointerUp={() => set(false)}
       onPointerCancel={() => set(false)}
       className={`flex h-[4.5rem] w-[4.5rem] touch-none items-center justify-center rounded-full font-display text-[11px] font-extrabold tracking-[0.12em] transition ${
-        accent ? 'bg-gradient-to-b from-ember to-ember-deep text-night' : 'glass text-white'
+        fire
+          ? 'bg-gradient-to-b from-[#fde68a] via-[#f97316] to-[#b91c1c] text-white shadow-[0_0_24px_rgb(249_115_22/0.6)]'
+          : accent
+            ? 'bg-gradient-to-b from-ember to-ember-deep text-night'
+            : 'glass text-white'
       } ${down ? 'scale-90 brightness-125' : ''}`}
     >
       {label}

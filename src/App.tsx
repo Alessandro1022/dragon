@@ -6,6 +6,7 @@ import { TouchControls } from './ui/TouchControls'
 import { DragonPanel } from './ui/DragonPanel'
 import { NestPanel } from './ui/NestPanel'
 import { Toasts } from './ui/Toasts'
+import { QuestPanel } from './ui/QuestPanel'
 import { useGame } from './store/gameStore'
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
           <TouchControls />
           {panel === 'dragons' && <DragonPanel />}
           {panel === 'nest' && <NestPanel />}
+          {panel === 'quest' && <QuestPanel />}
           <Toasts />
         </>
       )}

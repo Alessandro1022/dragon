@@ -52,8 +52,7 @@ const smoothstep = (a: number, b: number, t: number) => {
   return x * x * (3 - 2 * x)
 }
 
-/** Height of the ground at a world (x, z). Used by both the mesh and collision. */
-export function terrainHeight(x: number, z: number): number {
+function rawHeight(x: number, z: number): number {
   const d = Math.hypot(x, z) / ISLAND_RADIUS
   // jagged coastline
   const coast = d + n3(x * 0.0018, z * 0.0018) * 0.18
@@ -69,4 +68,26 @@ export function terrainHeight(x: number, z: number): number {
 /** Ground or water surface, whichever is higher. */
 export function surfaceHeight(x: number, z: number): number {
   return Math.max(terrainHeight(x, z), WATER_LEVEL)
+}
+
+/**
+ * Plateaus carved into the terrain for settlements, so buildings sit flat.
+ * Each zone blends the natural height toward the height at its centre.
+ */
+export const FLAT_ZONES = [
+  { id: 'town', x: -480, z: -320, r: 150 },
+  { id: 'camp', x: 800, z: -120, r: 70 },
+].map((zone) => ({ ...zone, h: rawHeight(zone.x, zone.z) }))
+
+/** Height of the ground at a world (x, z). Used by both the mesh and collision. */
+export function terrainHeight(x: number, z: number): number {
+  let h = rawHeight(x, z)
+  for (const zone of FLAT_ZONES) {
+    const d = Math.hypot(x - zone.x, z - zone.z)
+    if (d < zone.r) {
+      const k = smoothstep(zone.r, zone.r * 0.55, d)
+      h = h + (zone.h - h) * k
+    }
+  }
+  return h
 }

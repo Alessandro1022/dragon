@@ -23,14 +23,21 @@ import {
   breedCooldownLeft,
 } from '../systems/dragons'
 import { safeStorage } from '../lib/storage'
+import { MISSIONS, missionById, SHOP, type Counter } from '../systems/missions'
+import { randomGenome as rollGenome } from '../systems/genetics'
 
 type Phase = 'menu' | 'playing'
 export type Mode = 'walking' | 'flying'
-export type Panel = null | 'dragons' | 'nest'
+export type Panel = null | 'dragons' | 'nest' | 'quest'
 
 export interface Prompt {
   label: string
-  action: 'mount' | 'dismount' | 'nest' | 'pickup-egg'
+  action: 'mount' | 'dismount' | 'nest' | 'quest'
+}
+
+export interface ActiveMission {
+  id: string
+  baseline: number
 }
 
 export interface Toast {
@@ -48,6 +55,8 @@ interface GameState {
   prompt: Prompt | null
   toasts: Toast[]
   telemetry: FlightTelemetry
+  heat: number
+  guardsClose: boolean
   collected: number[]
   courseStart: number | null
   courseTime: number | null
@@ -62,6 +71,12 @@ interface GameState {
   inventory: Record<FoodKind, number>
   foundWildEggs: number[]
   bestCourseTime: number | null
+  gold: number
+  counters: Record<Counter, number>
+  activeMission: ActiveMission | null
+  completedMissions: string[]
+  royalEggDay: number
+  day: number
 
   // actions
   start: () => void
@@ -87,10 +102,46 @@ interface GameState {
   findWildEgg: (index: number, egg: Egg) => void
   breedDragons: (aId: string, bId: string) => boolean
   tickNeeds: (seconds: number) => void
+  setHeat: (level: number, guardsClose: boolean) => void
+  bump: (counter: Counter, n?: number) => void
+  acceptMission: (id: string) => void
+  abandonMission: () => void
+  turnInMission: () => void
+  checkMission: () => void
+  buy: (itemId: string) => void
+  busted: () => void
+  newDay: () => void
+  stealRoyalEgg: () => void
   resetProgress: () => void
 }
 
 let toastId = 1
+
+/** Pay out a mission's reward and mark it done. */
+function completeMission(id: string) {
+  const def = missionById(id)
+  if (!def) return
+  const s = useGame.getState()
+  const active = s.dragons.find((d) => d.id === s.activeDragonId)
+  useGame.setState((st) => ({
+    gold: st.gold + def.reward.gold,
+    inventory: {
+      fish: st.inventory.fish + (def.reward.fish ?? 0),
+      berries: st.inventory.berries + (def.reward.berries ?? 0),
+    },
+    completedMissions: [...st.completedMissions, id],
+    activeMission: null,
+    dragons: st.dragons.map((d) => (d.id === active?.id ? { ...d, xp: d.xp + def.reward.xp } : d)),
+  }))
+  s.toast(`Uppdrag klart: ${def.title}! +${def.reward.gold} guld`, 'gold')
+  const next = MISSIONS.find((m) => m.requires === id)
+  if (next) setTimeout(() => useGame.getState().toast(`Hedda i Draksten har ett nytt uppdrag.`, 'info'), 1500)
+}
+
+/** A royal egg: high-quality genes. */
+export function royalEgg(): Egg {
+  return { id: uid(), genome: rollGenome(Math.random, 0.85), progress: 0, foundAt: Date.now(), source: 'vild' }
+}
 
 function initialProgress() {
   const starter = starterDragon()
@@ -104,6 +155,12 @@ function initialProgress() {
     inventory: { berries: 3, fish: 1 } as Record<FoodKind, number>,
     foundWildEggs: [] as number[],
     bestCourseTime: null as number | null,
+    gold: 50,
+    counters: { coursesCompleted: 0, wildEggsFound: 0, royalEggsStolen: 0, heistEscapes: 0, tentsBurned: 0, guardsDowned: 0 } as Record<Counter, number>,
+    activeMission: null as ActiveMission | null,
+    completedMissions: [] as string[],
+    royalEggDay: -1,
+    day: 0,
   }
 }
 
@@ -134,6 +191,8 @@ export const useGame = create<GameState>()(
         prompt: null,
         toasts: [],
         telemetry: { speed: 0, altitude: 0, stamina: 1, boosting: false },
+        heat: 0,
+        guardsClose: false,
         collected: [],
         courseStart: null,
         courseTime: null,
@@ -179,6 +238,8 @@ export const useGame = create<GameState>()(
             bestCourseTime: time !== null && (bestCourseTime === null || time < bestCourseTime) ? time : bestCourseTime,
           })
           if (finished) {
+            get().bump('coursesCompleted')
+            set((st) => ({ gold: st.gold + 25 }))
             get().addFood('fish', 2)
             const active = get().dragons.find((d) => d.id === get().activeDragonId)
             if (active) set((s) => ({ dragons: updateDragon(s.dragons, active.id, (d) => withXp(d, 40)) }))
@@ -306,6 +367,7 @@ export const useGame = create<GameState>()(
           set({ foundWildEggs: [...s.foundWildEggs, index] })
           s.toast('Du hittade ett vilt drakägg!', 'gold')
           s.addEgg(egg)
+          get().bump('wildEggsFound')
         },
 
         breedDragons: (aId, bId) => {
@@ -350,6 +412,87 @@ export const useGame = create<GameState>()(
           }))
         },
 
+        setHeat: (heat, guardsClose) => {
+          const cur = get()
+          if (cur.heat === heat && cur.guardsClose === guardsClose) return
+          set({ heat, guardsClose })
+        },
+
+        bump: (counter, n = 1) => {
+          set((st) => ({ counters: { ...st.counters, [counter]: st.counters[counter] + n } }))
+          get().checkMission()
+        },
+
+        acceptMission: (id) => {
+          const s = get()
+          const def = missionById(id)
+          if (!def || s.completedMissions.includes(id)) return
+          if (def.requires && !s.completedMissions.includes(def.requires)) return
+          set({ activeMission: { id, baseline: def.goal ? s.counters[def.goal.counter] : 0 } })
+          s.toast(`Nytt uppdrag: ${def.title}`, 'gold')
+        },
+
+        abandonMission: () => set({ activeMission: null }),
+
+        turnInMission: () => {
+          const s = get()
+          const def = s.activeMission && missionById(s.activeMission.id)
+          if (!def?.deliver) return
+          const need = def.deliver
+          if ((need.fish ?? 0) > s.inventory.fish || (need.berries ?? 0) > s.inventory.berries) {
+            return s.toast('Du har inte allt som behövs än.', 'warn')
+          }
+          set({
+            inventory: {
+              fish: s.inventory.fish - (need.fish ?? 0),
+              berries: s.inventory.berries - (need.berries ?? 0),
+            },
+          })
+          completeMission(def.id)
+        },
+
+        checkMission: () => {
+          const s = get()
+          const def = s.activeMission && missionById(s.activeMission.id)
+          if (!def?.goal) return
+          if (s.counters[def.goal.counter] - s.activeMission!.baseline >= def.goal.amount) completeMission(def.id)
+        },
+
+        buy: (itemId) => {
+          const s = get()
+          const item = SHOP.find((i) => i.id === itemId)
+          if (!item) return
+          if (s.gold < item.price) return s.toast('Inte tillräckligt med guld.', 'warn')
+          if (item.kind === 'incubate') {
+            if (!s.nestEgg || s.hatchReady) return s.toast('Det finns inget ägg som ruvar.', 'warn')
+            set({ gold: s.gold - item.price })
+            s.incubate(0.5)
+            return
+          }
+          set({ gold: s.gold - item.price })
+          s.addFood(item.kind, 1)
+        },
+
+        newDay: () => {
+          set((st) => ({ day: st.day + 1 }))
+          get().toast(`Dag ${get().day + 1} gryr över ön.`)
+        },
+
+        stealRoyalEgg: () => {
+          const s = get()
+          if (s.royalEggDay === s.day) return
+          set({ royalEggDay: s.day })
+          s.addEgg(royalEgg())
+          s.bump('royalEggsStolen')
+        },
+
+        busted: () => {
+          const s = get()
+          const lost = Math.floor(s.gold * 0.3)
+          set({ gold: s.gold - lost, heat: 0, guardsClose: false, panel: null })
+          s.toast(`Drakgardet tog dig! Du förlorade ${lost} guld.`, 'warn')
+        },
+
         resetProgress: () => set({ ...initialProgress(), mode: 'walking', panel: null }),
       }
     },
@@ -367,7 +510,15 @@ export const useGame = create<GameState>()(
         inventory: s.inventory,
         foundWildEggs: s.foundWildEggs,
         bestCourseTime: s.bestCourseTime,
+        gold: s.gold,
+        counters: s.counters,
+        activeMission: s.activeMission,
+        completedMissions: s.completedMissions,
+        royalEggDay: s.royalEggDay,
+        day: s.day,
       }),
+      // older saves lack the newer fields — fill them from fresh defaults
+      merge: (persisted, current) => ({ ...current, ...(persisted as object) }),
     },
   ),
 )

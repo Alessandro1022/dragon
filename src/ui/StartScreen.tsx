@@ -22,7 +22,7 @@ export function StartScreen() {
           DRAGON
         </h1>
         <p className="rise mx-auto mt-4 max-w-md text-sm text-white/75 sm:text-base" style={{ animationDelay: '0.2s' }}>
-          Ett ägg väntar i nästet. Kläck det, föd upp din drake och ta Ember till himlen.
+          Kläck ägget i nästet, föd upp din drake och flyg till Draksten. Där väntar uppdrag, ett kungligt kläckeri och Drakgardet.
         </p>
       </div>
 
@@ -41,7 +41,7 @@ export function StartScreen() {
               <li><b className="text-white">Vänster spak</b> styr</li>
               <li><b className="text-white">Guldknappen</b> agera</li>
               <li><b className="text-white">Boost</b> fart + eld</li>
-              <li><b className="text-white">Flaxa</b> stig uppåt</li>
+              <li><b className="text-white">ELD</b> sprut eld</li>
             </ul>
           ) : (
             <ul className="grid grid-cols-2 gap-2">
@@ -49,7 +49,8 @@ export function StartScreen() {
               <li><Key>A</Key><Key>D</Key> sväng</li>
               <li><Key>Space</Key> hoppa / flaxa</li>
               <li><Key>Shift</Key> spring / boost</li>
-              <li><Key>E</Key> kliv upp / landa</li>
+              <li><Key>E</Key> kliv upp / landa / prata</li>
+              <li><Key>F</Key> eld (i luften)</li>
               <li><Key>I</Key> dina drakar</li>
             </ul>
           )}

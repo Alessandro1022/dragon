@@ -18,6 +18,8 @@ export const flight = {
   grounded: false,
   /** seconds of forced climb after mounting */
   takeoff: 0,
+  /** breathing fire this frame */
+  firing: false,
 }
 
 export const FLIGHT = {
@@ -61,4 +63,5 @@ export function parkAt(x: number, groundY: number, z: number, yaw: number, stand
   flight.takeoff = 0
   flight.boosting = false
   flight.flapping = false
+  flight.firing = false
 }

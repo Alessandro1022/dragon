@@ -1,4 +1,4 @@
-import { terrainHeight, ISLAND_RADIUS } from './terrainHeight'
+import { terrainHeight, ISLAND_RADIUS, FLAT_ZONES } from './terrainHeight'
 
 /** Deterministic points of interest, computed once from the terrain. */
 
@@ -87,3 +87,17 @@ export const BERRY_SPOTS: [number, number, number][] = [
 export const FISH_SPOTS = scatter(30, 99, (_x, h) => h < -3 && h > -25).map(
   ([x, , z]) => [x, 0, z] as [number, number, number],
 )
+
+// --- Settlements -----------------------------------------------------------
+
+const townZone = FLAT_ZONES.find((z) => z.id === 'town')!
+const campZone = FLAT_ZONES.find((z) => z.id === 'camp')!
+
+/** Draksten: the town with the royal hatchery and the Dragon Guard. */
+export const TOWN = { x: townZone.x, y: townZone.h, z: townZone.z, radius: 95 }
+export const HATCHERY: [number, number, number] = [TOWN.x + 34, TOWN.y, TOWN.z - 30]
+export const QUEST_GIVER: [number, number, number] = [TOWN.x + 9, TOWN.y, TOWN.z + 6]
+export const GUARD_TOWER: [number, number, number] = [TOWN.x - 40, TOWN.y, TOWN.z - 36]
+
+/** Bandit camp in the eastern hills. */
+export const CAMP = { x: campZone.x, y: campZone.h, z: campZone.z, radius: 40 }

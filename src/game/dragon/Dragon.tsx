@@ -9,8 +9,17 @@ import { useGame, selectActive } from '../../store/gameStore'
 import { RiderModel, type RiderAnim } from '../player/RiderModel'
 import { player } from '../player/playerState'
 import { terrainHeight } from '../world/terrainHeight'
+import { breathe } from '../combat'
+import { emit } from '../effects/particles'
+import { view } from '../../systems/dragons'
+import { raiseHeat, heat } from '../heat'
+import { TOWN } from '../world/worldSpots'
 
 const toPlayer = new THREE.Vector3()
+const mouth = new THREE.Vector3()
+const MOUTH_OFFSET = new THREE.Vector3(0, 1.6, -7.6)
+const fireVel = new THREE.Vector3()
+const fireTint = new THREE.Color()
 
 /** The ridden dragon: flies with the rider on its back, or stands parked. */
 export function Dragon() {
@@ -53,7 +62,7 @@ export function Dragon() {
       anim.look = THREE.MathUtils.damp(anim.look, 0, 3, dt)
     }
     anim.flapping = flight.flapping
-    anim.boosting = flight.boosting
+    anim.boosting = flight.boosting || flight.firing
     anim.pitch = flight.pitch
     anim.bank = flight.bank
 
@@ -63,7 +72,26 @@ export function Dragon() {
     }
     if (riderGroup.current) riderGroup.current.visible = !parked
 
-    const on = flight.boosting
+    // fire breath: damage whatever is in the cone; arson in town is a crime
+    if (flight.firing && group.current) {
+      mouth.copy(MOUTH_OFFSET).applyQuaternion(group.current.quaternion).add(flight.position)
+      const fp = active ? view(active).stats.firepower : 5
+      breathe(mouth, flight.forward, 26 + fp * 5, dt)
+      // a stream of flame particles that inherits the dragon's velocity
+      fireTint.set(look?.palette.fire[0] ?? '#ff9a2e')
+      const n = Math.ceil(dt * 160)
+      for (let k = 0; k < n; k++) {
+        fireVel.copy(flight.forward).multiplyScalar(55 + Math.random() * 20).add(flight.velocity)
+        emit(mouth, fireVel, { spread: 14, life: 0.55, size: 3.2, tint: fireTint })
+      }
+      const inTown = Math.hypot(flight.position.x - TOWN.x, flight.position.z - TOWN.z) < TOWN.radius * 1.15
+      if (inTown && clock.elapsedTime - heat.lastArson > 8) {
+        heat.lastArson = clock.elapsedTime
+        raiseHeat(1, 'Du sätter eld på Draksten! Drakgardet är efter dig.')
+      }
+    }
+
+    const on = flight.firing
     const flicker = 0.85 + Math.sin(clock.elapsedTime * 40) * 0.1 + Math.random() * 0.1
     if (flame.current) {
       const sc = on ? flicker : 0.0001
@@ -84,16 +112,17 @@ export function Dragon() {
       </group>
       {/* breath from the mouth */}
       <group ref={flame} position={[0, 1.6, -7.6]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -1.6]}>
-          <coneGeometry args={[0.55, 3.2, 8, 1, true]} />
-          <meshBasicMaterial color={fireOuter} transparent opacity={0.85} toneMapped={false} />
+        {/* cone tip at the mouth, widening forward */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -9]}>
+          <coneGeometry args={[3.2, 18, 10, 1, true]} />
+          <meshBasicMaterial color={fireOuter} transparent opacity={0.22} toneMapped={false} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -1.1]}>
-          <coneGeometry args={[0.3, 2.1, 8, 1, true]} />
-          <meshBasicMaterial color={fireInner} toneMapped={false} />
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -5.5]}>
+          <coneGeometry args={[1.4, 11, 10, 1, true]} />
+          <meshBasicMaterial color={fireInner} transparent opacity={0.35} toneMapped={false} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
       </group>
-      <pointLight ref={light} position={[0, 1.6, -9]} color={fireOuter} distance={40} decay={1.6} />
+      <pointLight ref={light} position={[0, 1.6, -14]} color={fireOuter} distance={60} decay={1.4} />
     </group>
   )
 }

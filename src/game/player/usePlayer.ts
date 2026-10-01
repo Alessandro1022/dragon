@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import * as THREE from 'three'
 import { readPitch, readTurn, readBoost, readFlap } from '../input/controls'
 import { terrainHeight } from '../world/terrainHeight'
+import { resolve } from '../world/colliders'
 import { useGame } from '../../store/gameStore'
 import { player, WALK } from './playerState'
 import type { RiderAnim } from './RiderModel'
@@ -34,6 +35,7 @@ export function usePlayer(group: RefObject<THREE.Group | null>, anim: RiderAnim)
     } else {
       player.speed = 0
     }
+    resolve(player.position, 0.45)
 
     // gravity & jumping
     const ground = terrainHeight(player.position.x, player.position.z)

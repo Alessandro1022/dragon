@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { terrainHeight, ISLAND_RADIUS } from '../game/world/terrainHeight'
-import { NEST, WILD_EGG_SPOTS } from '../game/world/worldSpots'
+import { NEST, WILD_EGG_SPOTS, TOWN, CAMP } from '../game/world/worldSpots'
+import { missionTarget } from '../game/missionTarget'
+import { guardDots } from '../game/npc/Guards'
+import * as THREE from 'three'
 import { COURSE } from '../game/world/Rings'
 import { flight } from '../game/dragon/flightState'
 import { player } from '../game/player/playerState'
@@ -8,6 +11,7 @@ import { useGame } from '../store/gameStore'
 import { clockLabel, daylight } from '../game/world/time'
 
 const RES = 140
+const mt = new THREE.Vector3()
 const EXTENT = ISLAND_RADIUS * 1.25 // world units from centre to map edge
 
 function colorFor(h: number) {
@@ -95,6 +99,50 @@ export function Minimap() {
         ctx.ellipse(x, y, 2.6, 3.4, 0, 0, Math.PI * 2)
         ctx.fill()
       })
+
+      // town & camp
+      const [tx, ty] = toMap(TOWN.x, TOWN.z)
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.arc(tx, ty, (TOWN.radius / EXTENT) * size * 0.5, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.fillStyle = '#e5e7eb'
+      ctx.fillRect(tx - 3, ty - 2, 6, 5)
+      ctx.beginPath()
+      ctx.moveTo(tx - 4, ty - 2)
+      ctx.lineTo(tx, ty - 6)
+      ctx.lineTo(tx + 4, ty - 2)
+      ctx.fill()
+      const [cx, cy] = toMap(CAMP.x, CAMP.z)
+      ctx.fillStyle = '#b45309'
+      ctx.beginPath()
+      ctx.moveTo(cx, cy - 5)
+      ctx.lineTo(cx + 5, cy + 4)
+      ctx.lineTo(cx - 5, cy + 4)
+      ctx.fill()
+
+      // mission objective
+      if (missionTarget(mt)) {
+        const [mx, my] = toMap(mt.x, mt.z)
+        ctx.save()
+        ctx.translate(mx, my)
+        ctx.rotate(Math.PI / 4)
+        ctx.fillStyle = '#67e8f9'
+        ctx.shadowColor = '#67e8f9'
+        ctx.shadowBlur = 8
+        ctx.fillRect(-4, -4, 8, 8)
+        ctx.restore()
+      }
+
+      // Dragon Guard
+      ctx.fillStyle = '#ef4444'
+      for (const g of guardDots) {
+        const [gx, gy] = toMap(g.x, g.z)
+        ctx.beginPath()
+        ctx.arc(gx, gy, 3.2, 0, Math.PI * 2)
+        ctx.fill()
+      }
 
       // next ring while flying
       if (s.mode === 'flying') {

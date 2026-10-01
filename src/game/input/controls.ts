@@ -16,6 +16,8 @@ export const input = {
   touchTurn: 0,
   touchBoost: false,
   touchFlap: false,
+  fire: false,
+  touchFire: false,
 }
 
 const keys = new Set<string>()
@@ -30,6 +32,7 @@ function recompute() {
   input.turn = (right ? 1 : 0) - (left ? 1 : 0)
   input.boost = keys.has('ShiftLeft') || keys.has('ShiftRight')
   input.flap = keys.has('Space')
+  input.fire = keys.has('KeyF')
 }
 
 export function readPitch() {
@@ -42,6 +45,10 @@ export function readTurn() {
 
 export function readBoost() {
   return input.boost || input.touchBoost
+}
+
+export function readFire() {
+  return input.fire || input.touchFire
 }
 
 export function readFlap() {

@@ -2,10 +2,11 @@ import * as THREE from 'three'
 import { useGame, selectActive } from '../store/gameStore'
 import { flight, FLIGHT } from './dragon/flightState'
 import { player, placePlayerNear } from './player/playerState'
-import { NEST } from './world/worldSpots'
+import { NEST, QUEST_GIVER } from './world/worldSpots'
 import { terrainHeight, surfaceHeight } from './world/terrainHeight'
 
 const nestPos = new THREE.Vector3(...NEST)
+const questPos = new THREE.Vector3(...QUEST_GIVER)
 const tmp = new THREE.Vector3()
 
 export const MOUNT_RANGE = 10
@@ -24,6 +25,9 @@ export function updatePrompt() {
     const dNest = player.position.distanceTo(nestPos)
     if (dNest < NEST_RANGE && dNest < dDragon) {
       return s.setPrompt({ label: s.hatchReady ? 'Kläck ägget' : s.nestEgg ? 'Öppna nästet' : 'Nästet', action: 'nest' })
+    }
+    if (player.position.distanceTo(questPos) < 5) {
+      return s.setPrompt({ label: 'Prata med Hedda', action: 'quest' })
     }
     if (dDragon < MOUNT_RANGE && dragon) {
       return s.setPrompt({ label: `Kliv upp på ${dragon.name}`, action: 'mount' })
@@ -61,6 +65,9 @@ export function performAction() {
       break
     case 'nest':
       s.openPanel('nest')
+      break
+    case 'quest':
+      s.openPanel('quest')
       break
     default:
       break

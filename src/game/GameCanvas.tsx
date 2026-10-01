@@ -11,11 +11,17 @@ import { Rings, NextRingArrow } from './world/Rings'
 import { Nest } from './world/Nest'
 import { Pickups } from './world/Pickups'
 import { WildEggs } from './world/WildEggs'
+import { Town } from './world/Town'
+import { BanditCamp } from './world/BanditCamp'
+import { MissionMarker } from './world/MissionMarker'
+import { Guards } from './npc/Guards'
+import { Villagers } from './npc/Villagers'
 import { Dragon } from './dragon/Dragon'
 import { Companion } from './dragon/Companion'
 import { Player } from './player/Player'
 import { CameraRig } from './CameraRig'
 import { Systems } from './Systems'
+import { FireParticles } from './effects/FireParticles'
 
 export function GameCanvas() {
   return (
@@ -37,6 +43,11 @@ export function GameCanvas() {
         <Nest />
         <Pickups />
         <WildEggs />
+        <Town />
+        <BanditCamp />
+        <Villagers />
+        <Guards />
+        <MissionMarker />
         <Rings />
         <NextRingArrow />
         <Dragon />
@@ -44,6 +55,7 @@ export function GameCanvas() {
         <Player />
         <CameraRig />
         <Systems />
+        <FireParticles />
         <EffectComposer multisampling={0}>
           <Bloom intensity={0.7} luminanceThreshold={0.85} luminanceSmoothing={0.2} mipmapBlur />
           <Vignette offset={0.25} darkness={0.55} />

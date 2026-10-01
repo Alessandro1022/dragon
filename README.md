@@ -17,9 +17,12 @@ npm run dev
 | W / S | Spak upp/ner | Stig / dyk |
 | A / D | Spak vänster/höger | Sväng |
 | Space | FLAXA | Vingslag, ger lyft |
-| Shift | BOOST | Fart + eld |
+| Shift | BOOST / SPRINT | Fart |
+| F | ELD | Eldsprut (i luften) |
+| E | Guldknappen | Kliv upp, landa, näste, prata |
+| I / Tab | Drakikonen | Dina drakar |
 
-Dyk för att få fart, stig för att tappa den. Boost och vingslag kostar uthållighet.
+Dyk för att få fart, stig för att tappa den. Boost, vingslag och eld kostar uthållighet.
 
 ## Struktur
 
@@ -28,9 +31,14 @@ src/
 ├─ game/
 │  ├─ GameCanvas.tsx        3D-scen + post-processing
 │  ├─ world/                terräng, skog, vatten, moln, himmel, ringbana
-│  ├─ dragon/               flygfysik, kamera, procedurell drakmodell
+│  ├─ dragon/               flygfysik, drakmodell, följeslagare
+│  ├─ player/               ryttare till fots
+│  ├─ npc/                  Drakgardet, bybor
+│  ├─ effects/              eld- och rökpartiklar
+│  ├─ combat.ts, heat.ts    skademål och efterlysning
 │  └─ input/                tangentbord + touch
-├─ store/gameStore.ts       spelstatus (Zustand)
+├─ systems/                 genetik, drakvård, uppdrag (ren logik, kan köras på server)
+├─ store/gameStore.ts       spelstatus + sparning (Zustand)
 ├─ ui/                      startskärm, HUD, touchkontroller
 └─ types/
 ```
@@ -38,8 +46,9 @@ src/
 ## Roadmap
 
 - [x] Fas 1 – Flyga: öppen ö, flygfysik, chase-kamera, ringbana, mobilstöd
-- [ ] Fas 2 – Till fots + kliva upp/av draken
-- [ ] Fas 3 – Ägg → drake: kläckning, mata, träna, band, genetik
-- [ ] Fas 4 – Stad, NPC:er, heat-system, uppdrag
-- [ ] Fas 5 – Strid: eldattacker, hälsa, fiendedrakar
-- [ ] Fas 6 – Online via Supabase: konton, avel mellan spelare, crews
+- [x] Fas 2 – Till fots, kliva upp/landa, ryttare i sadeln
+- [x] Fas 3 – Ägg → drake: ruvning, kläckning, mata, träna, band, genetik, avel, vilda ägg
+- [x] Fas 4 – Draksten: stad, bybor, Hedda + 5 uppdrag, marknad, guld, kungligt kläckeri, heat 1–5 och Drakgardet
+- [x] Fas 5 (bas) – Eldsprut med partiklar, brinnande banditläger, vaktryttare som kan skjutas ner
+- [x] Dag/natt-cykel, minikarta, sparning i webbläsaren
+- [ ] Fas 6 – Online via Supabase: konton, molnsparning, avel mellan spelare, crews, handel

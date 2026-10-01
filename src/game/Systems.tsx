@@ -6,6 +6,7 @@ import { updatePrompt } from './interaction'
 import { flight } from './dragon/flightState'
 import { player } from './player/playerState'
 import { NEST } from './world/worldSpots'
+import { worldTime } from './world/time'
 
 const nestPos = new THREE.Vector3(...NEST)
 
@@ -19,10 +20,16 @@ export const INCUBATION_SECONDS = 240
  */
 export function Systems() {
   const acc = useRef(0)
+  const lastT = useRef(worldTime.t)
   useFrame((_, dt) => {
     const s = useGame.getState()
     if (s.phase !== 'playing') return
     updatePrompt()
+
+    // a new day dawns when the clock passes 06:00
+    const dawn = 0.25
+    if (lastT.current < dawn && worldTime.t >= dawn) s.newDay()
+    lastT.current = worldTime.t
 
     acc.current += Math.min(dt, 0.25)
     if (acc.current < 1) return

@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { readPitch, readTurn, readBoost, readFlap } from '../input/controls'
+import { readPitch, readTurn, readBoost, readFlap, readFire } from '../input/controls'
 import { surfaceHeight, ISLAND_RADIUS } from '../world/terrainHeight'
 import { flight, FLIGHT } from './flightState'
 import { useGame, selectActive } from '../../store/gameStore'
@@ -21,7 +21,10 @@ export function useFlight() {
     const dt = Math.min(rawDt, 1 / 20)
     const s = useGame.getState()
     const playing = s.phase === 'playing'
-    if (playing && s.mode !== 'flying') return
+    if (playing && s.mode !== 'flying') {
+      flight.firing = false
+      return
+    }
     const free = playing && s.panel === null
 
     const active = selectActive(s)
@@ -54,6 +57,7 @@ export function useFlight() {
     const wantsFlap = (free && readFlap() && flight.stamina > 0.02) || flight.takeoff > 0
     flight.boosting = wantsBoost
     flight.flapping = wantsFlap
+    flight.firing = free && readFire() && flight.stamina > 0.02
 
     flight.speed += -Math.sin(flight.pitch) * FLIGHT.gravity * dt
     flight.speed += (cruise - flight.speed) * FLIGHT.drag * dt
@@ -62,7 +66,8 @@ export function useFlight() {
 
     if (wantsBoost) flight.stamina -= (FLIGHT.staminaDrainBoost / mul.stamina) * dt
     if (wantsFlap && flight.takeoff <= 0) flight.stamina -= (FLIGHT.staminaDrainFlap / mul.stamina) * dt
-    if (!wantsBoost && !wantsFlap) flight.stamina += FLIGHT.staminaRegen * mul.stamina * dt
+    if (flight.firing) flight.stamina -= (0.16 / mul.stamina) * dt
+    if (!wantsBoost && !wantsFlap && !flight.firing) flight.stamina += FLIGHT.staminaRegen * mul.stamina * dt
     flight.stamina = THREE.MathUtils.clamp(flight.stamina, 0, 1)
 
     // --- integrate ---

@@ -18,8 +18,18 @@ const COLORS = {
   boots: '#2a1f17',
 }
 
+/** Dragon Guard uniform */
+export const GUARD_COLORS: typeof COLORS = {
+  tunic: '#cbd5e1',
+  leather: '#334155',
+  cape: '#1e3a8a',
+  skin: '#c68e5f',
+  trim: '#e5e7eb',
+  boots: '#1f2937',
+}
+
 /** Low-poly dragon rider (~1.8 units tall, origin at the feet, facing -Z). */
-export function RiderModel({ anim }: { anim: RiderAnim }) {
+export function RiderModel({ anim, colors = COLORS }: { anim: RiderAnim; colors?: typeof COLORS }) {
   const legL = useRef<THREE.Group>(null)
   const legR = useRef<THREE.Group>(null)
   const armL = useRef<THREE.Group>(null)
@@ -30,14 +40,14 @@ export function RiderModel({ anim }: { anim: RiderAnim }) {
 
   const m = useMemo(
     () => ({
-      tunic: new THREE.MeshStandardMaterial({ color: COLORS.tunic, flatShading: true, roughness: 0.8 }),
-      leather: new THREE.MeshStandardMaterial({ color: COLORS.leather, flatShading: true, roughness: 0.7 }),
-      cape: new THREE.MeshStandardMaterial({ color: COLORS.cape, flatShading: true, side: THREE.DoubleSide, roughness: 0.9 }),
-      skin: new THREE.MeshStandardMaterial({ color: COLORS.skin, flatShading: true }),
-      trim: new THREE.MeshStandardMaterial({ color: COLORS.trim, flatShading: true, metalness: 0.6, roughness: 0.3 }),
-      boots: new THREE.MeshStandardMaterial({ color: COLORS.boots, flatShading: true }),
+      tunic: new THREE.MeshStandardMaterial({ color: colors.tunic, flatShading: true, roughness: 0.8 }),
+      leather: new THREE.MeshStandardMaterial({ color: colors.leather, flatShading: true, roughness: 0.7 }),
+      cape: new THREE.MeshStandardMaterial({ color: colors.cape, flatShading: true, side: THREE.DoubleSide, roughness: 0.9 }),
+      skin: new THREE.MeshStandardMaterial({ color: colors.skin, flatShading: true }),
+      trim: new THREE.MeshStandardMaterial({ color: colors.trim, flatShading: true, metalness: 0.6, roughness: 0.3 }),
+      boots: new THREE.MeshStandardMaterial({ color: colors.boots, flatShading: true }),
     }),
-    [],
+    [colors],
   )
 
   useFrame((_, dt) => {
