@@ -27,6 +27,7 @@ export function Dragon() {
   const flame = useRef<THREE.Group>(null)
   const light = useRef<THREE.PointLight>(null)
   const riderGroup = useRef<THREE.Group>(null)
+  const mouthRef = useRef<THREE.Object3D | null>(null)
   const active = useGame(selectActive)
   const look = useDragonLook(active)
   const anim = useRef<DragonAnim>({ mode: 'fly', flapping: false, boosting: false, pitch: 0, bank: 0, look: 0 }).current
@@ -74,7 +75,8 @@ export function Dragon() {
 
     // fire breath: damage whatever is in the cone; arson in town is a crime
     if (flight.firing && group.current) {
-      mouth.copy(MOUTH_OFFSET).applyQuaternion(group.current.quaternion).add(flight.position)
+      if (mouthRef.current) mouthRef.current.getWorldPosition(mouth)
+      else mouth.copy(MOUTH_OFFSET).applyQuaternion(group.current.quaternion).add(flight.position)
       const fp = active ? view(active).stats.firepower : 5
       breathe(mouth, flight.forward, 26 + fp * 5, dt)
       // a stream of flame particles that inherits the dragon's velocity
@@ -94,8 +96,13 @@ export function Dragon() {
     const on = flight.firing
     const flicker = 0.85 + Math.sin(clock.elapsedTime * 40) * 0.1 + Math.random() * 0.1
     if (flame.current) {
-      const sc = on ? flicker : 0.0001
-      flame.current.scale.setScalar(THREE.MathUtils.lerp(flame.current.scale.x, sc, 0.35))
+      flame.current.visible = on
+      flame.current.scale.setScalar(on ? flicker : 1)
+      // keep the flame glued to the (moving) snout
+      if (on && mouthRef.current && group.current) {
+        mouthRef.current.getWorldPosition(mouth)
+        group.current.worldToLocal(flame.current.position.copy(mouth))
+      }
     }
     if (light.current) light.current.intensity = on ? 60 * flicker : 0
   })
@@ -105,21 +112,21 @@ export function Dragon() {
 
   return (
     <group ref={group}>
-      <DragonModel look={look} anim={anim} />
+      <DragonModel look={look} anim={anim} mouthRef={mouthRef} />
       {/* rider in the saddle */}
-      <group ref={riderGroup} position={[0, 0.3, -1.35]}>
+      <group ref={riderGroup} position={[0, 0.62, -1.35]}>
         <RiderModel anim={riderAnim} />
       </group>
       {/* breath from the mouth */}
-      <group ref={flame} position={[0, 1.6, -7.6]}>
+      <group ref={flame} position={[0, 1.6, -7.6]} visible={false}>
         {/* cone tip at the mouth, widening forward */}
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -9]}>
           <coneGeometry args={[3.2, 18, 10, 1, true]} />
-          <meshBasicMaterial color={fireOuter} transparent opacity={0.22} toneMapped={false} side={THREE.DoubleSide} depthWrite={false} />
+          <meshBasicMaterial color={fireOuter} transparent opacity={0.12} toneMapped={false} side={THREE.DoubleSide} depthWrite={false} blending={THREE.AdditiveBlending} />
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -5.5]}>
           <coneGeometry args={[1.4, 11, 10, 1, true]} />
-          <meshBasicMaterial color={fireInner} transparent opacity={0.35} toneMapped={false} side={THREE.DoubleSide} depthWrite={false} />
+          <meshBasicMaterial color={fireInner} transparent opacity={0.22} toneMapped={false} side={THREE.DoubleSide} depthWrite={false} blending={THREE.AdditiveBlending} />
         </mesh>
       </group>
       <pointLight ref={light} position={[0, 1.6, -14]} color={fireOuter} distance={60} decay={1.4} />

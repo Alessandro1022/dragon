@@ -40,15 +40,18 @@ export function RiderModel({ anim, colors = COLORS }: { anim: RiderAnim; colors?
 
   const m = useMemo(
     () => ({
-      tunic: new THREE.MeshStandardMaterial({ color: colors.tunic, flatShading: true, roughness: 0.8 }),
-      leather: new THREE.MeshStandardMaterial({ color: colors.leather, flatShading: true, roughness: 0.7 }),
-      cape: new THREE.MeshStandardMaterial({ color: colors.cape, flatShading: true, side: THREE.DoubleSide, roughness: 0.9 }),
-      skin: new THREE.MeshStandardMaterial({ color: colors.skin, flatShading: true }),
-      trim: new THREE.MeshStandardMaterial({ color: colors.trim, flatShading: true, metalness: 0.6, roughness: 0.3 }),
-      boots: new THREE.MeshStandardMaterial({ color: colors.boots, flatShading: true }),
+      tunic: new THREE.MeshStandardMaterial({ color: colors.tunic, roughness: 0.85 }),
+      leather: new THREE.MeshStandardMaterial({ color: colors.leather, roughness: 0.6, metalness: 0.05 }),
+      cape: new THREE.MeshStandardMaterial({ color: colors.cape, side: THREE.DoubleSide, roughness: 0.92 }),
+      skin: new THREE.MeshStandardMaterial({ color: colors.skin, roughness: 0.6 }),
+      trim: new THREE.MeshStandardMaterial({ color: colors.trim, metalness: 0.85, roughness: 0.28 }),
+      boots: new THREE.MeshStandardMaterial({ color: colors.boots, roughness: 0.55 }),
+      steel: new THREE.MeshStandardMaterial({ color: '#9aa3ad', metalness: 0.9, roughness: 0.32 }),
+      hair: new THREE.MeshStandardMaterial({ color: '#2a1a10', roughness: 0.8 }),
     }),
     [colors],
   )
+  const geo = useMemo(() => riderGeometry(), [])
 
   useFrame((_, dt) => {
     const moving = anim.speed > 0.5 && anim.grounded && !anim.seated
@@ -84,69 +87,109 @@ export function RiderModel({ anim, colors = COLORS }: { anim: RiderAnim; colors?
       <group ref={body}>
         {/* legs (pivot at hip) */}
         {[
-          [-0.16, legL],
-          [0.16, legR],
+          [-0.12, legL],
+          [0.12, legR],
         ].map(([x, ref], i) => (
           <group key={i} ref={ref as React.RefObject<THREE.Group>} position={[x as number, 0.95, 0]}>
-            <mesh material={m.leather} position={[0, -0.28, 0]} scale={[0.15, 0.56, 0.17]}>
-              <boxGeometry />
-            </mesh>
-            <mesh material={m.boots} position={[0, -0.75, -0.04]} scale={[0.16, 0.42, 0.24]}>
-              <boxGeometry />
-            </mesh>
+            <mesh geometry={geo.thigh} material={m.leather} position={[0, -0.24, 0]} castShadow />
+            <mesh geometry={geo.shin} material={m.boots} position={[0, -0.66, 0]} castShadow />
+            <mesh geometry={geo.foot} material={m.boots} position={[0, -0.9, -0.06]} castShadow />
+            <mesh geometry={geo.kneeCap} material={m.steel} position={[0, -0.46, -0.08]} />
           </group>
         ))}
 
-        {/* torso */}
-        <mesh material={m.tunic} position={[0, 1.27, 0]} scale={[0.5, 0.66, 0.3]}>
-          <boxGeometry />
-        </mesh>
-        <mesh material={m.leather} position={[0, 1.0, 0]} scale={[0.54, 0.1, 0.33]}>
-          <boxGeometry />
-        </mesh>
-        <mesh material={m.trim} position={[0, 1.0, -0.17]} scale={[0.1, 0.08, 0.02]}>
-          <boxGeometry />
-        </mesh>
-        {/* shoulder pauldrons */}
+        {/* torso: tunic, leather cuirass, belt */}
+        <mesh geometry={geo.torso} material={m.tunic} position={[0, 1.2, 0]} castShadow />
+        <mesh geometry={geo.cuirass} material={m.leather} position={[0, 1.32, 0]} castShadow />
+        <mesh geometry={geo.belt} material={m.leather} position={[0, 0.98, 0]} rotation={[Math.PI / 2, 0, 0]} />
+        <mesh geometry={geo.buckle} material={m.trim} position={[0, 0.98, -0.16]} />
+        {/* pauldrons */}
         {[-1, 1].map((s) => (
-          <mesh key={s} material={m.leather} position={[s * 0.3, 1.56, 0]} scale={[0.17, 0.12, 0.2]}>
-            <icosahedronGeometry args={[1, 0]} />
-          </mesh>
+          <mesh key={s} geometry={geo.pauldron} material={m.steel} position={[s * 0.25, 1.56, 0]} rotation={[0, 0, s * -0.35]} castShadow />
         ))}
 
         {/* arms (pivot at shoulder) */}
         {[
-          [-0.33, armL],
-          [0.33, armR],
+          [-0.29, armL],
+          [0.29, armR],
         ].map(([x, ref], i) => (
-          <group key={i} ref={ref as React.RefObject<THREE.Group>} position={[x as number, 1.52, 0]}>
-            <mesh material={m.tunic} position={[0, -0.25, 0]} scale={[0.13, 0.5, 0.14]}>
-              <boxGeometry />
-            </mesh>
-            <mesh material={m.skin} position={[0, -0.56, 0]} scale={[0.09, 0.1, 0.1]}>
-              <icosahedronGeometry args={[1, 0]} />
-            </mesh>
+          <group key={i} ref={ref as React.RefObject<THREE.Group>} position={[x as number, 1.5, 0]}>
+            <mesh geometry={geo.upperArm} material={m.tunic} position={[0, -0.18, 0]} castShadow />
+            <mesh geometry={geo.forearm} material={m.leather} position={[0, -0.44, 0]} castShadow />
+            <mesh geometry={geo.hand} material={m.leather} position={[0, -0.6, 0]} />
           </group>
         ))}
 
-        {/* head + hood */}
-        <mesh material={m.skin} position={[0, 1.78, -0.02]} scale={[0.17, 0.2, 0.18]}>
-          <icosahedronGeometry args={[1, 1]} />
-        </mesh>
-        <mesh material={m.cape} position={[0, 1.84, 0.04]} scale={[0.22, 0.24, 0.22]}>
-          <icosahedronGeometry args={[1, 1]} />
-        </mesh>
-        <mesh material={m.cape} position={[0, 2.02, 0.16]} rotation={[0.7, 0, 0]}>
-          <coneGeometry args={[0.1, 0.3, 5]} />
-        </mesh>
+        {/* neck, head, hair, hood */}
+        <mesh geometry={geo.neck} material={m.skin} position={[0, 1.66, 0]} />
+        <mesh geometry={geo.head} material={m.skin} position={[0, 1.8, -0.01]} castShadow />
+        <mesh geometry={geo.hair} material={m.hair} position={[0, 1.86, 0.03]} />
+        <mesh geometry={geo.hood} material={m.cape} position={[0, 1.79, 0.07]} castShadow />
 
         {/* cape (pivot at shoulders) */}
-        <group ref={cape} position={[0, 1.58, 0.17]}>
-          <mesh material={m.cape} position={[0, -0.55, 0]}>
-            <planeGeometry args={[0.62, 1.1, 1, 3]} />
-          </mesh>
+        <group ref={cape} position={[0, 1.58, 0.15]}>
+          <mesh geometry={geo.cape} material={m.cape} position={[0, -0.6, 0]} castShadow />
         </group>
       </group>
     </group>
   )
+}
+
+/** Smooth rider parts (built once, shared by every rider). */
+let cachedGeo: ReturnType<typeof buildRiderGeometry> | null = null
+function riderGeometry() {
+  return (cachedGeo ??= buildRiderGeometry())
+}
+
+function buildRiderGeometry() {
+  const cap = (r: number, l: number, sx = 1, sz = 1) => {
+    const g = new THREE.CapsuleGeometry(r, l, 6, 14)
+    g.scale(sx, 1, sz)
+    return g
+  }
+  const torso = new THREE.CylinderGeometry(0.22, 0.18, 0.62, 18)
+  torso.scale(1, 1, 0.7)
+  const cuirass = new THREE.CylinderGeometry(0.245, 0.2, 0.42, 18)
+  cuirass.scale(1, 1, 0.74)
+  const belt = new THREE.TorusGeometry(0.2, 0.035, 8, 24)
+  belt.scale(1, 0.72, 1)
+  const pauldron = new THREE.SphereGeometry(0.12, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2)
+  pauldron.scale(1.2, 0.9, 1.1)
+  const head = new THREE.SphereGeometry(0.115, 20, 16)
+  head.scale(0.92, 1.08, 1)
+  const hair = new THREE.SphereGeometry(0.12, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.55)
+  const hood = new THREE.SphereGeometry(0.15, 18, 12, Math.PI * 0.15, Math.PI * 1.7, 0, Math.PI * 0.7)
+  hood.rotateY(Math.PI)
+  hood.scale(1, 1.05, 1.05)
+  const cape = new THREE.PlaneGeometry(0.5, 1.1, 4, 8)
+  // gentle drape: curve the cape around the back
+  const p = cape.attributes.position as THREE.BufferAttribute
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i)
+    const y = p.getY(i)
+    p.setZ(i, x * x * 0.6 + (0.55 - y) * 0.04)
+    p.setX(i, x * (1 + (0.55 - y) * 0.35))
+  }
+  cape.computeVertexNormals()
+  const foot = new THREE.SphereGeometry(0.075, 12, 8)
+  foot.scale(1.1, 0.7, 2)
+  return {
+    thigh: cap(0.075, 0.32, 1, 1.1),
+    shin: cap(0.068, 0.3),
+    foot,
+    kneeCap: new THREE.SphereGeometry(0.05, 10, 8),
+    torso,
+    cuirass,
+    belt,
+    buckle: new THREE.BoxGeometry(0.06, 0.05, 0.02),
+    pauldron,
+    upperArm: cap(0.058, 0.24),
+    forearm: cap(0.052, 0.22),
+    hand: new THREE.SphereGeometry(0.05, 10, 8),
+    neck: new THREE.CylinderGeometry(0.05, 0.06, 0.1, 10),
+    head,
+    hair,
+    hood,
+    cape,
+  }
 }
