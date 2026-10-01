@@ -10,6 +10,18 @@ npm install
 npm run dev
 ```
 
+## Grafik
+
+- LOD-terräng i chunks med PBR-material från CC0-skanningar (mossa, skogsjord, lavsten, sand, snö)
+- GPU-gräs med vind, riktiga procedurella träd (EZ-Tree) i tre LOD-nivåer med impostors
+- Hav med djupfärg, reflektioner och skum, volymetriska moln, dag/natt med HDRI-ljus
+- Riggad procedurell drake: skinnad kropp, fjäll-shader, vingmembran med genomlysning
+- Korsvirkeshus, kullersten, stentorn
+- Efterbehandling: N8AO, bloom, ACES, SMAA. Kvalitet låg/medel/hög + automatisk sänkning
+- Dev: `/?lab` visar draken i en snabb testscen (`&mode=fly&view=back&flap=1&seed=42`)
+
+Se `CREDITS.md` för alla tredjepartsresurser.
+
 ## Online (Supabase)
 
 Spelet fungerar helt offline. För konton, molnsparning, topplista och Avelsbörsen:

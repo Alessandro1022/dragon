@@ -29,7 +29,7 @@ export const GUARD_COLORS: typeof COLORS = {
 }
 
 /** Low-poly dragon rider (~1.8 units tall, origin at the feet, facing -Z). */
-export function RiderModel({ anim, colors = COLORS }: { anim: RiderAnim; colors?: typeof COLORS }) {
+export function RiderModel({ anim, colors = COLORS, plain = false }: { anim: RiderAnim; colors?: typeof COLORS; plain?: boolean }) {
   const legL = useRef<THREE.Group>(null)
   const legR = useRef<THREE.Group>(null)
   const armL = useRef<THREE.Group>(null)
@@ -104,7 +104,7 @@ export function RiderModel({ anim, colors = COLORS }: { anim: RiderAnim; colors?
         <mesh geometry={geo.belt} material={m.leather} position={[0, 0.98, 0]} rotation={[Math.PI / 2, 0, 0]} />
         <mesh geometry={geo.buckle} material={m.trim} position={[0, 0.98, -0.16]} />
         {/* pauldrons */}
-        {[-1, 1].map((s) => (
+        {!plain && [-1, 1].map((s) => (
           <mesh key={s} geometry={geo.pauldron} material={m.steel} position={[s * 0.25, 1.56, 0]} rotation={[0, 0, s * -0.35]} castShadow />
         ))}
 
@@ -124,10 +124,10 @@ export function RiderModel({ anim, colors = COLORS }: { anim: RiderAnim; colors?
         <mesh geometry={geo.neck} material={m.skin} position={[0, 1.66, 0]} />
         <mesh geometry={geo.head} material={m.skin} position={[0, 1.8, -0.01]} castShadow />
         <mesh geometry={geo.hair} material={m.hair} position={[0, 1.86, 0.03]} />
-        <mesh geometry={geo.hood} material={m.cape} position={[0, 1.79, 0.07]} castShadow />
+        {!plain && <mesh geometry={geo.hood} material={m.cape} position={[0, 1.79, 0.07]} castShadow />}
 
         {/* cape (pivot at shoulders) */}
-        <group ref={cape} position={[0, 1.58, 0.15]}>
+        <group ref={cape} position={[0, 1.58, 0.15]} visible={!plain}>
           <mesh geometry={geo.cape} material={m.cape} position={[0, -0.6, 0]} castShadow />
         </group>
       </group>

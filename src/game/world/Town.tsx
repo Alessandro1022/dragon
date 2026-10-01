@@ -1,18 +1,17 @@
 import { useFrame } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { TOWN, HATCHERY, GUARD_TOWER, QUEST_GIVER } from './worldSpots'
 import { HOUSES, LANTERNS } from './townLayout'
 import { daylight } from './time'
 import { useGame } from '../../store/gameStore'
 import { MISSIONS } from '../../systems/missions'
+import { buildTown, createTownMaterials, createCobbleMaterial } from './town/buildings'
 
 const m4 = new THREE.Matrix4()
 const q = new THREE.Quaternion()
 const v = new THREE.Vector3()
 const s3 = new THREE.Vector3()
-const col = new THREE.Color()
-const Y = new THREE.Vector3(0, 1, 0)
 
 /** Draksten: streets, houses, lanterns, the guard tower, the royal hatchery and Hedda's stall. */
 export function Town() {
@@ -31,21 +30,19 @@ export function Town() {
 
 function Ground() {
   const y = TOWN.y + 0.06
+  const cobble = useMemo(() => createCobbleMaterial(), [])
   return (
     <group>
       {/* plaza */}
-      <mesh position={[TOWN.x, y, TOWN.z]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[20, 24]} />
-        <meshStandardMaterial color="#a3998a" flatShading roughness={1} />
+      <mesh position={[TOWN.x, y, TOWN.z]} rotation={[-Math.PI / 2, 0, 0]} material={cobble} receiveShadow>
+        <circleGeometry args={[20, 48]} />
       </mesh>
       {/* streets */}
-      <mesh position={[TOWN.x, y - 0.02, TOWN.z]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[TOWN.x, y - 0.02, TOWN.z]} rotation={[-Math.PI / 2, 0, 0]} material={cobble} receiveShadow>
         <planeGeometry args={[176, 9]} />
-        <meshStandardMaterial color="#8f8576" roughness={1} />
       </mesh>
-      <mesh position={[TOWN.x, y - 0.02, TOWN.z]} rotation={[-Math.PI / 2, 0, Math.PI / 2]}>
+      <mesh position={[TOWN.x, y - 0.02, TOWN.z]} rotation={[-Math.PI / 2, 0, Math.PI / 2]} material={cobble} receiveShadow>
         <planeGeometry args={[176, 9]} />
-        <meshStandardMaterial color="#8f8576" roughness={1} />
       </mesh>
       {/* fountain */}
       <group position={[TOWN.x, TOWN.y, TOWN.z]}>
@@ -72,60 +69,23 @@ function Ground() {
 }
 
 function Houses() {
-  const bodies = useRef<THREE.InstancedMesh>(null)
-  const roofs = useRef<THREE.InstancedMesh>(null)
-  const doors = useRef<THREE.InstancedMesh>(null)
-  const windows = useRef<THREE.InstancedMesh>(null)
-
-  useLayoutEffect(() => {
-    HOUSES.forEach((h, i) => {
-      q.setFromAxisAngle(Y, h.rot)
-      m4.compose(v.set(h.x, TOWN.y + h.h / 2, h.z), q, s3.set(h.w, h.h, h.d))
-      bodies.current!.setMatrixAt(i, m4)
-      bodies.current!.setColorAt(i, col.set(h.wall))
-      // 4-sided cone rotated 45° = pyramid roof
-      q.setFromAxisAngle(Y, h.rot + Math.PI / 4)
-      m4.compose(v.set(h.x, TOWN.y + h.h + 1.6, h.z), q, s3.set(h.w * 0.78, 3.4, h.d * 0.78))
-      roofs.current!.setMatrixAt(i, m4)
-      roofs.current!.setColorAt(i, col.set(h.roof))
-      // door + window on the street-facing (-Z local) side
-      q.setFromAxisAngle(Y, h.rot)
-      v.set(0, 1.2, -h.d / 2 - 0.05).applyQuaternion(q).add(s3.set(h.x, TOWN.y, h.z))
-      m4.compose(v, q, s3.set(1.4, 2.4, 0.15))
-      doors.current!.setMatrixAt(i, m4)
-      v.set(h.w * 0.27, h.h * 0.6, -h.d / 2 - 0.05).applyQuaternion(q).add(s3.set(h.x, TOWN.y, h.z))
-      m4.compose(v, q, s3.set(1.2, 1.1, 0.12))
-      windows.current!.setMatrixAt(i, m4)
-    })
-    for (const r of [bodies, roofs, doors, windows]) {
-      r.current!.instanceMatrix.needsUpdate = true
-      if (r.current!.instanceColor) r.current!.instanceColor.needsUpdate = true
-    }
-  }, [])
-
-  const windowMat = useRef<THREE.MeshStandardMaterial>(null)
+  const geos = useMemo(() => buildTown(HOUSES, TOWN.y), [])
+  const mats = useMemo(() => createTownMaterials(), [])
+  useEffect(
+    () => () => {
+      Object.values(geos).forEach((g) => g?.dispose())
+      Object.values(mats).forEach((m) => m.dispose())
+    },
+    [geos, mats],
+  )
   useFrame(() => {
-    if (windowMat.current) windowMat.current.emissiveIntensity = 0.15 + (1 - daylight()) * 2.2
+    mats.glass.emissiveIntensity = 0.1 + (1 - daylight()) * 2.6
   })
-
   return (
     <group>
-      <instancedMesh ref={bodies} args={[undefined, undefined, HOUSES.length]}>
-        <boxGeometry />
-        <meshStandardMaterial flatShading roughness={0.9} />
-      </instancedMesh>
-      <instancedMesh ref={roofs} args={[undefined, undefined, HOUSES.length]}>
-        <coneGeometry args={[0.75, 1, 4]} />
-        <meshStandardMaterial flatShading roughness={0.8} />
-      </instancedMesh>
-      <instancedMesh ref={doors} args={[undefined, undefined, HOUSES.length]}>
-        <boxGeometry />
-        <meshStandardMaterial color="#4a2f1d" flatShading />
-      </instancedMesh>
-      <instancedMesh ref={windows} args={[undefined, undefined, HOUSES.length]}>
-        <boxGeometry />
-        <meshStandardMaterial ref={windowMat} color="#3b2f1e" emissive="#ffb347" emissiveIntensity={0.2} />
-      </instancedMesh>
+      {(Object.keys(geos) as (keyof typeof geos)[]).map((k) => (
+        <mesh key={k} geometry={geos[k]!} material={mats[k]} castShadow={k !== 'glass'} receiveShadow />
+      ))}
     </group>
   )
 }
@@ -192,22 +152,20 @@ function Palisade() {
 
 function GuardTower() {
   const [x, y, z] = GUARD_TOWER
+  const stone = useMemo(() => createTownMaterials().stone, [])
   return (
     <group position={[x, y, z]}>
-      <mesh position={[0, 14, 0]}>
-        <cylinderGeometry args={[4.2, 5.2, 28, 8]} />
-        <meshStandardMaterial color="#8a8580" flatShading />
+      <mesh position={[0, 14, 0]} material={stone} castShadow receiveShadow>
+        <cylinderGeometry args={[4.2, 5.2, 28, 32]} />
       </mesh>
-      <mesh position={[0, 28.6, 0]}>
-        <cylinderGeometry args={[6.2, 5, 1.4, 8]} />
-        <meshStandardMaterial color="#77716b" flatShading />
+      <mesh position={[0, 28.6, 0]} material={stone} castShadow>
+        <cylinderGeometry args={[6.2, 5, 1.4, 32]} />
       </mesh>
       {Array.from({ length: 8 }).map((_, i) => {
         const a = (i / 8) * Math.PI * 2
         return (
-          <mesh key={i} position={[Math.cos(a) * 5.8, 30, Math.sin(a) * 5.8]}>
+          <mesh key={i} position={[Math.cos(a) * 5.8, 30, Math.sin(a) * 5.8]} material={stone} castShadow>
             <boxGeometry args={[1.4, 1.6, 1.4]} />
-            <meshStandardMaterial color="#8a8580" flatShading />
           </mesh>
         )
       })}

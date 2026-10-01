@@ -106,13 +106,13 @@ export function Pickups() {
 
   return (
     <group>
-      <instancedMesh ref={bushMesh} args={[undefined, undefined, bushes.length]} frustumCulled={false}>
-        <icosahedronGeometry args={[1, 0]} />
-        <meshStandardMaterial color="#2f6b35" flatShading />
+      <instancedMesh ref={bushMesh} args={[undefined, undefined, bushes.length]} frustumCulled={false} castShadow receiveShadow>
+        <icosahedronGeometry args={[1, 3]} />
+        <meshStandardMaterial color="#24481f" roughness={0.85} />
       </instancedMesh>
       <instancedMesh ref={berryMesh} args={[undefined, undefined, bushes.length * BERRIES_PER_BUSH]} frustumCulled={false}>
-        <icosahedronGeometry args={[1, 0]} />
-        <meshStandardMaterial color="#ef4444" emissive="#ff2a1f" emissiveIntensity={1.4} toneMapped={false} />
+        <sphereGeometry args={[1, 12, 10]} />
+        <meshStandardMaterial color="#d61f1f" emissive="#ff2a1f" emissiveIntensity={0.6} roughness={0.25} />
       </instancedMesh>
       <instancedMesh ref={fishBody} args={[undefined, undefined, fishes.length]} frustumCulled={false}>
         <icosahedronGeometry args={[1, 0]} />

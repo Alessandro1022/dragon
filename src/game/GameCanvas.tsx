@@ -31,7 +31,7 @@ import { useGame } from '../store/gameStore'
 
 const DPR = { low: [0.6, 0.85], medium: [0.85, 1.25], high: [1, 1.75] } as const
 
-export function GameCanvas() {
+export function GameCanvas({ onReady }: { onReady?: () => void }) {
   const quality = useGame((s) => s.settings.quality)
   return (
     <Canvas
@@ -39,6 +39,10 @@ export function GameCanvas() {
       gl={{ antialias: quality === 'low', powerPreference: 'high-performance', stencil: false }}
       camera={{ fov: 60, near: 0.5, far: 9000, position: [0, 160, 940] }}
       shadows
+      onCreated={() => {
+        // give the first frames a moment to compile shaders before revealing
+        setTimeout(() => onReady?.(), 600)
+      }}
     >
       <ToneMappingSwitch postFx={quality !== 'low'} />
       <Suspense fallback={null}>

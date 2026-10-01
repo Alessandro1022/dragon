@@ -9,6 +9,7 @@ import { flight } from '../dragon/flightState'
 import { player } from '../player/playerState'
 import { heat } from '../heat'
 import { useGame } from '../../store/gameStore'
+import { RiderModel, type RiderAnim } from '../player/RiderModel'
 
 const COUNT = 16
 const TUNICS = ['#9a3412', '#1d4ed8', '#15803d', '#a16207', '#6b21a8', '#be123c', '#0f766e', '#57534e']
@@ -20,6 +21,8 @@ interface Villager {
   speed: number
   yaw: number
   phase: number
+  anim: RiderAnim
+  colors: { tunic: string; leather: string; cape: string; skin: string; trim: string; boots: string }
   wait: number
   tunic: string
   hair: string
@@ -41,6 +44,15 @@ export function Villagers() {
           speed: 1.3 + (i % 4) * 0.25,
           yaw: 0,
           phase: i,
+          anim: { speed: 0, grounded: true, seated: false },
+          colors: {
+            tunic: TUNICS[i % TUNICS.length],
+            leather: ['#6b4a2b', '#4a3526', '#7a5a3a'][i % 3],
+            cape: TUNICS[(i + 3) % TUNICS.length],
+            skin: ['#c68e5f', '#e0b48c', '#8d5a3b', '#a8714a'][i % 4],
+            trim: '#b08d57',
+            boots: '#2a1f17',
+          },
           wait: (i % 5) * 0.8,
           tunic: TUNICS[i % TUNICS.length],
           hair: HAIR[i % HAIR.length],
@@ -50,7 +62,6 @@ export function Villagers() {
     [],
   )
   const refs = useRef<(THREE.Group | null)[]>([])
-  const legs = useRef<(THREE.Group | null)[]>([])
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 1 / 20)
@@ -94,17 +105,13 @@ export function Villagers() {
       p.pos.y = terrainHeight(p.pos.x, p.pos.z)
 
       p.phase += dt * (fleeing ? 14 : moving ? 8 : 0)
+      p.anim.speed = fleeing ? 9 : moving ? p.speed * 3 : 0
       const g = refs.current[i]
       if (g) {
         g.position.copy(p.pos)
-        g.position.y += moving ? Math.abs(Math.sin(p.phase)) * 0.08 : 0
         g.rotation.y = p.yaw
       }
-      const l = legs.current[i]
-      if (l) {
-        l.children[0].rotation.x = moving ? Math.sin(p.phase) * 0.6 : 0
-        l.children[1].rotation.x = moving ? -Math.sin(p.phase) * 0.6 : 0
-      }
+
     })
   })
 
@@ -118,32 +125,7 @@ export function Villagers() {
           }}
           scale={p.scale}
         >
-          <group
-            ref={(el) => {
-              legs.current[i] = el
-            }}
-          >
-            {[-0.13, 0.13].map((x) => (
-              <group key={x} position={[x, 0.85, 0]}>
-                <mesh position={[0, -0.42, 0]} scale={[0.14, 0.85, 0.15]}>
-                  <boxGeometry />
-                  <meshStandardMaterial color="#3f3a36" flatShading />
-                </mesh>
-              </group>
-            ))}
-          </group>
-          <mesh position={[0, 1.25, 0]} scale={[0.46, 0.8, 0.3]}>
-            <boxGeometry />
-            <meshStandardMaterial color={p.tunic} flatShading />
-          </mesh>
-          <mesh position={[0, 1.86, 0]} scale={[0.17, 0.2, 0.18]}>
-            <icosahedronGeometry args={[1, 1]} />
-            <meshStandardMaterial color="#d1a374" flatShading />
-          </mesh>
-          <mesh position={[0, 1.98, 0.04]} scale={[0.19, 0.12, 0.2]}>
-            <icosahedronGeometry args={[1, 1]} />
-            <meshStandardMaterial color={p.hair} flatShading />
-          </mesh>
+          <RiderModel anim={p.anim} colors={p.colors} plain />
         </group>
       ))}
     </group>

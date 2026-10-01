@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { NEST } from './worldSpots'
 import { useGame } from '../../store/gameStore'
 import { eggColors, express } from '../../systems/genetics'
+import { createTownMaterials } from './town/buildings'
 
 /** Stick nest with the incubating egg; the egg wobbles and glows as it nears hatching. */
 export function Nest() {
@@ -12,6 +13,7 @@ export function Nest() {
   const eggRef = useRef<THREE.Group>(null)
   const glow = useRef<THREE.PointLight>(null)
 
+  const stoneMat = useMemo(() => createTownMaterials().stone, [])
   const sticks = useMemo(() => {
     const out: { pos: [number, number, number]; rot: [number, number, number]; len: number }[] = []
     for (let i = 0; i < 46; i++) {
@@ -45,7 +47,7 @@ export function Nest() {
       {sticks.map((s, i) => (
         <mesh key={i} position={s.pos} rotation={s.rot}>
           <cylinderGeometry args={[0.09, 0.12, s.len, 4]} />
-          <meshStandardMaterial color={i % 4 === 0 ? '#7a5532' : '#5c3d22'} flatShading />
+          <meshStandardMaterial color={i % 4 === 0 ? '#7a5532' : '#5c3d22'} roughness={0.85} />
         </mesh>
       ))}
       <mesh position={[0, 0.2, 0]} scale={[2.1, 0.35, 2.1]}>
@@ -56,9 +58,16 @@ export function Nest() {
       {[0, 1, 2, 3, 4].map((i) => {
         const a = (i / 5) * Math.PI * 2
         return (
-          <mesh key={i} position={[Math.cos(a) * 6.5, 1.2, Math.sin(a) * 6.5]} rotation={[0.05, a, 0.08]}>
-            <boxGeometry args={[0.9, 2.8 + (i % 2) * 0.8, 0.7]} />
-            <meshStandardMaterial color="#8d8a84" flatShading />
+          <mesh
+            key={i}
+            position={[Math.cos(a) * 6.5, 1.0, Math.sin(a) * 6.5]}
+            rotation={[0.05 + i * 0.03, a, 0.08 - i * 0.02]}
+            scale={[0.55, 1.8 + (i % 2) * 0.5, 0.42]}
+            material={stoneMat}
+            castShadow
+            receiveShadow
+          >
+            <dodecahedronGeometry args={[1, 1]} />
           </mesh>
         )
       })}

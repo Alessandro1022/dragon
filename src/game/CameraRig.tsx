@@ -5,6 +5,7 @@ import { flight, FLIGHT } from './dragon/flightState'
 import { player } from './player/playerState'
 import { useGame } from '../store/gameStore'
 import { surfaceHeight } from './world/terrainHeight'
+import { colliders } from './world/colliders'
 
 const desired = new THREE.Vector3()
 const look = new THREE.Vector3()
@@ -57,6 +58,22 @@ export function CameraRig() {
       look.copy(flight.position).addScaledVector(flight.forward, 12)
       look.y += 2
       targetFov = 60 + speedK * 22
+    }
+
+    // on foot: don't let walls and trees come between the camera and the rider
+    if (walking) {
+      const px = player.position.x
+      const pz = player.position.z
+      for (let k = 0; k < 12; k++) {
+        const blocked = colliders.some((c) => {
+          const dx = desired.x - c.x
+          const dz = desired.z - c.z
+          return dx * dx + dz * dz < (c.r + 0.4) * (c.r + 0.4)
+        })
+        if (!blocked) break
+        desired.x = px + (desired.x - px) * 0.82
+        desired.z = pz + (desired.z - pz) * 0.82
+      }
     }
 
     const floor = surfaceHeight(desired.x, desired.z) + (walking ? 1.2 : 3)
