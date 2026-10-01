@@ -1,0 +1,73 @@
+import { useEffect } from 'react'
+
+/**
+ * Mutable input state read every frame by the flight system.
+ * Kept outside React state so input never triggers re-renders.
+ */
+export const input = {
+  pitch: 0, // -1 dive .. 1 climb
+  turn: 0, // -1 left .. 1 right
+  boost: false,
+  flap: false,
+  // touch joystick contributes separately so keyboard and touch can coexist
+  touchPitch: 0,
+  touchTurn: 0,
+  touchBoost: false,
+  touchFlap: false,
+}
+
+const keys = new Set<string>()
+
+function recompute() {
+  const up = keys.has('KeyW') || keys.has('ArrowUp')
+  const down = keys.has('KeyS') || keys.has('ArrowDown')
+  const left = keys.has('KeyA') || keys.has('ArrowLeft')
+  const right = keys.has('KeyD') || keys.has('ArrowRight')
+  // W = climb, S = dive (arcade style, matches the touch joystick)
+  input.pitch = (up ? 1 : 0) - (down ? 1 : 0)
+  input.turn = (right ? 1 : 0) - (left ? 1 : 0)
+  input.boost = keys.has('ShiftLeft') || keys.has('ShiftRight')
+  input.flap = keys.has('Space')
+}
+
+export function readPitch() {
+  return Math.max(-1, Math.min(1, input.pitch + input.touchPitch))
+}
+
+export function readTurn() {
+  return Math.max(-1, Math.min(1, input.turn + input.touchTurn))
+}
+
+export function readBoost() {
+  return input.boost || input.touchBoost
+}
+
+export function readFlap() {
+  return input.flap || input.touchFlap
+}
+
+export function useKeyboard() {
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code === 'Space') e.preventDefault()
+      keys.add(e.code)
+      recompute()
+    }
+    const up = (e: KeyboardEvent) => {
+      keys.delete(e.code)
+      recompute()
+    }
+    const blur = () => {
+      keys.clear()
+      recompute()
+    }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    window.addEventListener('blur', blur)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', blur)
+    }
+  }, [])
+}
