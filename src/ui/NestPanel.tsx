@@ -3,6 +3,7 @@ import { useGame, selectActive } from '../store/gameStore'
 import { incubationRate, INCUBATION_SECONDS } from '../game/Systems'
 import { dragonName } from '../systems/names'
 import { EggIcon, Sheet, Bar } from './components'
+import { BreedingTab } from './BreedingTab'
 
 export function NestPanel() {
   const egg = useGame((s) => s.nestEgg)
@@ -14,6 +15,7 @@ export function NestPanel() {
   const [rate, setRate] = useState(incubationRate())
   const lastWarm = useRef(0)
   const [pulse, setPulse] = useState(0)
+  const [tab, setTab] = useState<'egg' | 'breed'>('egg')
 
   useEffect(() => {
     const id = setInterval(() => setRate(incubationRate()), 500)
@@ -32,7 +34,25 @@ export function NestPanel() {
 
   return (
     <Sheet title="NÄSTET" onClose={() => openPanel(null)}>
-      {!egg ? (
+      <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-white/5 p-1">
+        {(
+          [
+            ['egg', 'Ägget'],
+            ['breed', 'Avel'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`rounded-lg py-2 text-sm font-semibold transition ${tab === id ? 'bg-white/12 text-white' : 'text-white/50'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === 'breed' ? (
+        <BreedingTab />
+      ) : !egg ? (
         <div className="py-4 text-center">
           <p className="font-display text-xl font-bold">Nästet är tomt</p>
           <p className="mx-auto mt-2 max-w-sm text-sm text-white/65">

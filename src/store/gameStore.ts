@@ -4,7 +4,7 @@ import type { FlightTelemetry } from '../types'
 import { resetFlight, parkAt } from '../game/dragon/flightState'
 import { DRAGON_SPAWN, PLAYER_SPAWN, NEST } from '../game/world/worldSpots'
 import { player } from '../game/player/playerState'
-import { randomGenome } from '../systems/genetics'
+import { randomGenome, breed as breedGenomes } from '../systems/genetics'
 import {
   createDragon,
   FOOD,
@@ -19,6 +19,8 @@ import {
   type Egg,
   type FoodKind,
   type TrainStat,
+  BREED_COST,
+  breedCooldownLeft,
 } from '../systems/dragons'
 import { safeStorage } from '../lib/storage'
 
@@ -83,6 +85,7 @@ interface GameState {
   incubate: (amount: number) => void
   hatch: (name: string) => void
   findWildEgg: (index: number, egg: Egg) => void
+  breedDragons: (aId: string, bId: string) => boolean
   tickNeeds: (seconds: number) => void
   resetProgress: () => void
 }
@@ -303,6 +306,35 @@ export const useGame = create<GameState>()(
           set({ foundWildEggs: [...s.foundWildEggs, index] })
           s.toast('Du hittade ett vilt drakägg!', 'gold')
           s.addEgg(egg)
+        },
+
+        breedDragons: (aId, bId) => {
+          const s = get()
+          const a = s.dragons.find((d) => d.id === aId)
+          const b = s.dragons.find((d) => d.id === bId)
+          if (!a || !b || a.id === b.id) return false
+          if (!view(a).stage.rideable || !view(b).stage.rideable) {
+            s.toast('Båda drakarna måste vara vuxna.', 'warn')
+            return false
+          }
+          const wait = Math.max(breedCooldownLeft(a), breedCooldownLeft(b))
+          if (wait > 0) {
+            s.toast(`Drakarna behöver vila ${Math.ceil(wait / 60000)} min till.`, 'warn')
+            return false
+          }
+          if (s.inventory.fish < BREED_COST.fish) {
+            s.toast(`Avel kostar ${BREED_COST.fish} silverfisk.`, 'warn')
+            return false
+          }
+          const now = Date.now()
+          const egg: Egg = { id: uid(), genome: breedGenomes(a.genome, b.genome), progress: 0, foundAt: now, source: 'avel' }
+          set({
+            inventory: { ...s.inventory, fish: s.inventory.fish - BREED_COST.fish },
+            dragons: s.dragons.map((d) => (d.id === aId || d.id === bId ? { ...d, lastBred: now, bond: Math.min(100, d.bond + 5) } : d)),
+          })
+          s.toast(`${a.name} och ${b.name} fick ett ägg!`, 'gold')
+          get().addEgg(egg)
+          return true
         },
 
         tickNeeds: (seconds) => {

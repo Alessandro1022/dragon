@@ -34,6 +34,8 @@ export interface DragonData {
   trained: Record<TrainStat, number>
   bornAt: number
   lastPlayed: number
+  /** timestamp of the last breeding (optional for older saves) */
+  lastBred?: number
 }
 
 export interface Egg {
@@ -137,4 +139,11 @@ export function flightMultipliers(v: DragonView | null) {
 /** xp gains are halved when the dragon is hungry */
 export function xpGain(d: DragonData, base: number) {
   return Math.round(base * (d.hunger < 20 ? 0.5 : 1) * (1 + d.bond / 200))
+}
+
+export const BREED_COOLDOWN_MS = 5 * 60_000
+export const BREED_COST: Record<FoodKind, number> = { berries: 0, fish: 2 }
+
+export function breedCooldownLeft(d: DragonData, now = Date.now()) {
+  return Math.max(0, (d.lastBred ?? 0) + BREED_COOLDOWN_MS - now)
 }

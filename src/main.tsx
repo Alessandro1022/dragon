@@ -11,9 +11,9 @@ createRoot(document.getElementById('root')!).render(
 
 // dev-only handle for debugging and automated playtests
 if (import.meta.env.DEV) {
-  Promise.all([import('./store/gameStore'), import('./game/player/playerState'), import('./game/dragon/flightState')]).then(
-    ([store, p, f]) => {
-      ;(window as unknown as Record<string, unknown>).__dragon = { useGame: store.useGame, player: p.player, flight: f.flight }
+  Promise.all([import('./store/gameStore'), import('./game/player/playerState'), import('./game/dragon/flightState'), import('./game/world/time')]).then(
+    ([store, p, f, t]) => {
+      ;(window as unknown as Record<string, unknown>).__dragon = { useGame: store.useGame, player: p.player, flight: f.flight, time: t.worldTime }
     },
   )
 }

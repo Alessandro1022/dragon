@@ -225,3 +225,36 @@ export function palette(p: Phenotype): DragonPalette {
 export function eggColors(p: Phenotype): [string, string] {
   return [hsl(p.hue, p.saturation * 0.8, Math.min(0.7, p.lightness + 0.25)), hsl(p.accentHue, 0.6, 0.6)]
 }
+
+export interface BreedingForecast {
+  elements: { element: Element; chance: number }[]
+  traits: { trait: Trait; chance: number }[]
+  stats: Record<'strength' | 'speed' | 'stamina' | 'firepower', [number, number]>
+}
+
+/**
+ * Exact odds from the parents' alleles (ignoring rare mutations):
+ * each parent passes one of its two alleles with 50% probability.
+ */
+export function forecast(a: Genome, b: Genome): BreedingForecast {
+  const elementOdds = new Map<Element, number>()
+  for (const ea of a.element)
+    for (const eb of b.element) {
+      const expressed = ELEMENTS[ea].dominance >= ELEMENTS[eb].dominance ? ea : eb
+      elementOdds.set(expressed, (elementOdds.get(expressed) ?? 0) + 0.25)
+    }
+  const carriers = (g: Genome, t: Trait) => g.traits.filter((list) => list.includes(t)).length / 2
+  const traits = (Object.keys(TRAITS) as Trait[])
+    .map((t) => ({ trait: t, chance: carriers(a, t) * carriers(b, t) }))
+    .filter((x) => x.chance > 0)
+  const range = (g: 'strength' | 'speed' | 'stamina' | 'firepower'): [number, number] => {
+    const vals: number[] = []
+    for (const x of a.numeric[g]) for (const y of b.numeric[g]) vals.push((x + y) / 2)
+    return [Math.min(...vals), Math.max(...vals)]
+  }
+  return {
+    elements: [...elementOdds.entries()].map(([element, chance]) => ({ element, chance })).sort((x, y) => y.chance - x.chance),
+    traits,
+    stats: { strength: range('strength'), speed: range('speed'), stamina: range('stamina'), firepower: range('firepower') },
+  }
+}

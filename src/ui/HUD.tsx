@@ -3,6 +3,7 @@ import { COURSE } from '../game/world/Rings'
 import { performAction } from '../game/interaction'
 import { view } from '../systems/dragons'
 import { DragonPortrait, Icon } from './components'
+import { Minimap } from './Minimap'
 
 const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
@@ -13,9 +14,17 @@ export function HUD() {
   return (
     <div className="pointer-events-none absolute inset-0 select-none p-4 text-white" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
       <div className="flex items-start justify-between gap-3">
-        {mode === 'flying' ? <CourseCard /> : <CompanionCard />}
+        <div className="flex flex-col items-start gap-3">
+          {mode === 'flying' ? <CourseCard /> : <CompanionCard />}
+          {isTouch && <Minimap />}
+        </div>
         <TopRight />
       </div>
+      {!isTouch && (
+        <div className="absolute bottom-5 left-5">
+          <Minimap />
+        </div>
+      )}
       {mode === 'flying' && <FlightGauges />}
       {prompt && !panel && !isTouch && (
         <button
