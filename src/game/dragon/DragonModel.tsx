@@ -1,25 +1,35 @@
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { flight } from './flightState'
+import type { DragonPalette } from '../../systems/genetics'
 
 /**
- * Procedural low-poly dragon. Forward is -Z.
+ * Procedural low-poly dragon. Forward is -Z, origin at the body centre.
  * Built from primitives so the game runs without downloaded assets;
- * later swapped for a rigged GLB with the same API.
+ * appearance is driven entirely by the dragon's genes.
  */
 
-export const DRAGON_COLORS = {
-  body: '#9b1c1c',
-  back: '#5c0e12',
-  belly: '#d9a441',
-  membrane: '#c2410c',
-  horn: '#efe6d2',
-  eye: '#ffcc33',
-  claw: '#2a2320',
+export interface DragonAnim {
+  mode: 'fly' | 'parked' | 'hover'
+  flapping: boolean
+  boosting: boolean
+  pitch: number
+  bank: number
+  /** head turn for looking at things (radians) */
+  look: number
 }
 
-function Bone({ from, to, radius, color }: { from: THREE.Vector3; to: THREE.Vector3; radius: number; color: string }) {
+export interface DragonLook {
+  palette: DragonPalette
+  wingspan: number
+  hornLength: number
+  twinHorns: boolean
+}
+
+/** Height from the body centre to the feet when standing. */
+export const STANDING_HEIGHT = 2.5
+
+function Bone({ from, to, radius, material }: { from: THREE.Vector3; to: THREE.Vector3; radius: number; material: THREE.Material }) {
   const { position, quaternion, length } = useMemo(() => {
     const dir = new THREE.Vector3().subVectors(to, from)
     const len = dir.length()
@@ -28,9 +38,8 @@ function Bone({ from, to, radius, color }: { from: THREE.Vector3; to: THREE.Vect
     return { position: mid, quaternion: q, length: len }
   }, [from, to])
   return (
-    <mesh position={position} quaternion={quaternion}>
+    <mesh position={position} quaternion={quaternion} material={material}>
       <cylinderGeometry args={[radius * 0.6, radius, length, 6]} />
-      <meshStandardMaterial color={color} flatShading roughness={0.6} />
     </mesh>
   )
 }
@@ -48,132 +57,145 @@ const W = {
   back: V(0.3, 0, 2.6),
 }
 
-function useMembrane() {
-  return useMemo(() => {
-    const scallop = (a: THREE.Vector3, b: THREE.Vector3, inward: number) => {
-      const m = a.clone().add(b).multiplyScalar(0.5)
-      const towardRoot = V(1.6, 0, 0.9).sub(m).multiplyScalar(inward)
-      return m.add(towardRoot)
-    }
-    const rim = [
-      W.root,
-      W.elbow,
-      W.wrist,
-      W.f1,
-      scallop(W.f1, W.f2, 0.28),
-      W.f2,
-      scallop(W.f2, W.f3, 0.25),
-      W.f3,
-      scallop(W.f3, W.back, 0.22),
-      W.back,
-    ]
-    const center = V(2.2, 0.15, 0.9)
-    const verts: number[] = []
-    for (let i = 0; i < rim.length; i++) {
-      const a = rim[i]
-      const b = rim[(i + 1) % rim.length]
-      verts.push(center.x, center.y, center.z, a.x, a.y, a.z, b.x, b.y, b.z)
-    }
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3))
-    g.computeVertexNormals()
-    return g
-  }, [])
-}
+const membraneGeometry = (() => {
+  const scallop = (a: THREE.Vector3, b: THREE.Vector3, inward: number) => {
+    const m = a.clone().add(b).multiplyScalar(0.5)
+    return m.add(V(1.6, 0, 0.9).sub(m).multiplyScalar(inward))
+  }
+  const rim = [W.root, W.elbow, W.wrist, W.f1, scallop(W.f1, W.f2, 0.28), W.f2, scallop(W.f2, W.f3, 0.25), W.f3, scallop(W.f3, W.back, 0.22), W.back]
+  const center = V(2.2, 0.15, 0.9)
+  const verts: number[] = []
+  for (let i = 0; i < rim.length; i++) {
+    const a = rim[i]
+    const b = rim[(i + 1) % rim.length]
+    verts.push(center.x, center.y, center.z, a.x, a.y, a.z, b.x, b.y, b.z)
+  }
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3))
+  g.computeVertexNormals()
+  return g
+})()
 
-function Wing({ side, wingRef }: { side: 1 | -1; wingRef: React.RefObject<THREE.Group | null> }) {
-  const membrane = useMembrane()
-  const bone = DRAGON_COLORS.back
+function Wing({ side, wingRef, mats, span }: { side: 1 | -1; wingRef: React.RefObject<THREE.Group | null>; mats: Mats; span: number }) {
   return (
     <group position={[side * 1.0, 0.75, -1.1]}>
-      <group ref={wingRef} scale={[side, 1, 1]}>
-        <mesh geometry={membrane}>
-          <meshStandardMaterial
-            color={DRAGON_COLORS.membrane}
-            emissive={DRAGON_COLORS.membrane}
-            emissiveIntensity={0.18}
-            side={THREE.DoubleSide}
-            flatShading
-            roughness={0.7}
-            transparent
-            opacity={0.94}
-          />
-        </mesh>
-        <Bone from={W.root} to={W.elbow} radius={0.32} color={bone} />
-        <Bone from={W.elbow} to={W.wrist} radius={0.24} color={bone} />
-        <Bone from={W.wrist} to={W.f1} radius={0.12} color={bone} />
-        <Bone from={W.wrist} to={W.f2} radius={0.11} color={bone} />
-        <Bone from={W.wrist} to={W.f3} radius={0.1} color={bone} />
-        <mesh position={W.wrist} rotation={[0, 0, -0.6]}>
+      <group ref={wingRef} scale={[side * span, 1, span]}>
+        <mesh geometry={membraneGeometry} material={mats.membrane} />
+        <Bone from={W.root} to={W.elbow} radius={0.32} material={mats.back} />
+        <Bone from={W.elbow} to={W.wrist} radius={0.24} material={mats.back} />
+        <Bone from={W.wrist} to={W.f1} radius={0.12} material={mats.back} />
+        <Bone from={W.wrist} to={W.f2} radius={0.11} material={mats.back} />
+        <Bone from={W.wrist} to={W.f3} radius={0.1} material={mats.back} />
+        <mesh position={W.wrist} rotation={[0, 0, -0.6]} material={mats.horn}>
           <coneGeometry args={[0.14, 0.7, 4]} />
-          <meshStandardMaterial color={DRAGON_COLORS.horn} flatShading />
         </mesh>
       </group>
     </group>
   )
 }
 
+interface Mats {
+  body: THREE.MeshStandardMaterial
+  back: THREE.MeshStandardMaterial
+  belly: THREE.MeshStandardMaterial
+  horn: THREE.MeshStandardMaterial
+  eye: THREE.MeshStandardMaterial
+  claw: THREE.MeshStandardMaterial
+  membrane: THREE.MeshStandardMaterial
+}
+
+function useMaterials(p: DragonPalette): Mats {
+  const mats = useMemo<Mats>(
+    () => ({
+      body: new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.55, metalness: 0.1 }),
+      back: new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.5 }),
+      belly: new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.4, metalness: 0.35 }),
+      horn: new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.4 }),
+      eye: new THREE.MeshStandardMaterial({ emissiveIntensity: 3 }),
+      claw: new THREE.MeshStandardMaterial({ color: '#2a2320', flatShading: true }),
+      membrane: new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, flatShading: true, roughness: 0.7, transparent: true, opacity: 0.94, emissiveIntensity: 0.18 }),
+    }),
+    [],
+  )
+  useEffect(() => {
+    mats.body.color.set(p.body)
+    mats.back.color.set(p.back)
+    mats.back.emissive.set(p.glow ? p.eye : '#000000')
+    mats.back.emissiveIntensity = p.glow ? 0.9 : 0
+    mats.belly.color.set(p.belly)
+    mats.horn.color.set(p.horn)
+    mats.eye.color.set(p.eye)
+    mats.eye.emissive.set(p.eye)
+    mats.membrane.color.set(p.membrane)
+    mats.membrane.emissive.set(p.membrane)
+  }, [p, mats])
+  useEffect(() => () => Object.values(mats).forEach((m) => m.dispose()), [mats])
+  return mats
+}
+
 const TAIL_SEGMENTS = 9
 
-export function DragonModel({ scale = 1 }: { scale?: number }) {
+export function DragonModel({ look, anim }: { look: DragonLook; anim: DragonAnim }) {
   const leftWing = useRef<THREE.Group>(null)
   const rightWing = useRef<THREE.Group>(null)
   const tail = useRef<(THREE.Group | null)[]>([])
   const neck = useRef<THREE.Group>(null)
   const head = useRef<THREE.Group>(null)
   const jaw = useRef<THREE.Mesh>(null)
-  const phase = useRef(0)
-
-  const mat = useMemo(
-    () => ({
-      body: new THREE.MeshStandardMaterial({ color: DRAGON_COLORS.body, flatShading: true, roughness: 0.55, metalness: 0.1 }),
-      back: new THREE.MeshStandardMaterial({ color: DRAGON_COLORS.back, flatShading: true, roughness: 0.5 }),
-      belly: new THREE.MeshStandardMaterial({ color: DRAGON_COLORS.belly, flatShading: true, roughness: 0.4, metalness: 0.35 }),
-      horn: new THREE.MeshStandardMaterial({ color: DRAGON_COLORS.horn, flatShading: true, roughness: 0.4 }),
-      eye: new THREE.MeshStandardMaterial({ color: DRAGON_COLORS.eye, emissive: DRAGON_COLORS.eye, emissiveIntensity: 3 }),
-      claw: new THREE.MeshStandardMaterial({ color: DRAGON_COLORS.claw, flatShading: true }),
-    }),
-    [],
-  )
+  const legs = useRef<(THREE.Group | null)[]>([])
+  const phase = useRef(Math.random() * 10)
+  const mat = useMaterials(look.palette)
 
   useFrame((_, dt) => {
-    // flap frequency: powerful beats when flapping/boosting, slow glide otherwise
-    const active = flight.flapping || flight.boosting
-    const climbing = flight.pitch > 0.25
-    const freq = active ? 7.5 : climbing ? 4 : 1.4
-    const amp = active ? 0.85 : climbing ? 0.5 : 0.12
+    const parked = anim.mode === 'parked'
+    const hover = anim.mode === 'hover'
+    const active = anim.flapping || anim.boosting
+    const climbing = anim.pitch > 0.25
+    const freq = parked ? 0.6 : hover ? 9 : active ? 7.5 : climbing ? 4 : 1.4
+    const amp = parked ? 0 : hover ? 0.75 : active ? 0.85 : climbing ? 0.5 : 0.12
     phase.current += dt * freq
     const beat = Math.sin(phase.current) * amp
-    // tuck wings back in a steep high-speed dive
-    const dive = THREE.MathUtils.clamp((-flight.pitch - 0.4) * 1.5, 0, 0.9)
-    const sweep = dive * 0.9
-    // the left wing is mirrored on X, so its rotations are mirrored too
+
+    // wings: folded when parked, tucked in a steep dive
+    const dive = THREE.MathUtils.clamp((-anim.pitch - 0.4) * 1.5, 0, 0.9)
+    const sweep = parked ? 1.25 : dive * 0.9
+    const lift = parked ? -0.55 + Math.sin(phase.current) * 0.03 : beat + 0.08 - dive * 0.3
     const wings: [THREE.Group | null, number][] = [
       [rightWing.current, 1],
       [leftWing.current, -1],
     ]
     for (const [w, side] of wings) {
       if (!w) continue
-      w.rotation.z = THREE.MathUtils.damp(w.rotation.z, (beat + 0.08 - dive * 0.3) * side, 12, dt)
-      w.rotation.y = THREE.MathUtils.damp(w.rotation.y, -sweep * side, 6, dt)
+      w.rotation.z = THREE.MathUtils.damp(w.rotation.z, lift * side, parked ? 5 : 12, dt)
+      w.rotation.y = THREE.MathUtils.damp(w.rotation.y, -sweep * side, 5, dt)
     }
 
-    // tail follows with a travelling wave and leans into turns
+    // tail: travelling wave, leans into turns, rests lower when parked
     const t = performance.now() / 1000
     tail.current.forEach((seg, i) => {
       if (!seg) return
       const k = (i + 1) / TAIL_SEGMENTS
-      seg.rotation.y = Math.sin(t * 2.2 - i * 0.55) * 0.07 * k + flight.bank * 0.06
-      seg.rotation.x = Math.sin(t * 1.6 - i * 0.4) * 0.03 + (active ? Math.cos(phase.current - i * 0.5) * 0.04 : 0)
+      seg.rotation.y = Math.sin(t * (parked ? 1.1 : 2.2) - i * 0.55) * (parked ? 0.12 : 0.07) * k + anim.bank * 0.06
+      const droop = parked ? (i < 3 ? 0.12 : -0.04) : 0
+      seg.rotation.x = droop + Math.sin(t * 1.6 - i * 0.4) * 0.03 + (active ? Math.cos(phase.current - i * 0.5) * 0.04 : 0)
     })
 
-    // head looks into the turn, jaw opens when boosting
-    if (neck.current) neck.current.rotation.y = THREE.MathUtils.damp(neck.current.rotation.y, -flight.bank * 0.25, 4, dt)
-    if (head.current) head.current.rotation.x = THREE.MathUtils.damp(head.current.rotation.x, -flight.pitch * 0.35, 4, dt)
-    if (jaw.current) jaw.current.rotation.x = THREE.MathUtils.damp(jaw.current.rotation.x, flight.boosting ? 0.45 : 0.05, 10, dt)
+    // legs: tucked in flight, standing when parked
+    legs.current.forEach((leg) => {
+      if (leg) leg.rotation.x = THREE.MathUtils.damp(leg.rotation.x, parked ? 0 : 0.9, 5, dt)
+    })
+
+    // neck/head: look into turns or at a target; breathe when parked
+    if (neck.current) {
+      neck.current.rotation.y = THREE.MathUtils.damp(neck.current.rotation.y, -anim.bank * 0.25 + anim.look, 3, dt)
+      neck.current.rotation.x = THREE.MathUtils.damp(neck.current.rotation.x, parked ? -0.15 + Math.sin(t * 0.8) * 0.04 : 0, 3, dt)
+    }
+    if (head.current) head.current.rotation.x = THREE.MathUtils.damp(head.current.rotation.x, parked ? 0.25 : -anim.pitch * 0.35, 4, dt)
+    if (jaw.current) jaw.current.rotation.x = THREE.MathUtils.damp(jaw.current.rotation.x, anim.boosting ? 0.45 : 0.05, 10, dt)
+
+    if (look.palette.glow) mat.back.emissiveIntensity = 0.6 + Math.sin(t * 2) * 0.35
   })
 
-  // Nested tail chain: each segment is a child of the previous one
   const tailChain = useMemo(() => {
     const build = (i: number): React.ReactNode => {
       if (i >= TAIL_SEGMENTS) {
@@ -204,8 +226,10 @@ export function DragonModel({ scale = 1 }: { scale?: number }) {
     return build(0)
   }, [mat])
 
+  const horn = look.hornLength
+
   return (
-    <group scale={scale}>
+    <group>
       {/* torso */}
       <mesh material={mat.body} scale={[1.35, 1.15, 2.9]}>
         <icosahedronGeometry args={[1, 1]} />
@@ -224,6 +248,12 @@ export function DragonModel({ scale = 1 }: { scale?: number }) {
         </mesh>
       ))}
 
+      {/* saddle */}
+      <mesh position={[0, 1.08, -1.25]} scale={[0.75, 0.16, 0.9]}>
+        <boxGeometry />
+        <meshStandardMaterial color="#4a3020" flatShading roughness={0.7} />
+      </mesh>
+
       {/* neck + head */}
       <group ref={neck} position={[0, 0.5, -2.8]}>
         {[0, 1, 2, 3].map((i) => (
@@ -240,23 +270,25 @@ export function DragonModel({ scale = 1 }: { scale?: number }) {
           <mesh material={mat.body} scale={[0.78, 0.62, 1.05]}>
             <icosahedronGeometry args={[1, 1]} />
           </mesh>
-          {/* snout */}
           <mesh material={mat.body} position={[0, -0.08, -1.05]} rotation={[-Math.PI / 2, 0, 0]} scale={[1, 1, 0.75]}>
             <cylinderGeometry args={[0.28, 0.55, 1.2, 6]} />
           </mesh>
-          {/* jaw */}
           <mesh ref={jaw} material={mat.belly} position={[0, -0.38, -0.5]} scale={[0.5, 0.18, 0.95]}>
             <boxGeometry args={[1, 1, 1.4]} />
           </mesh>
-          {/* horns */}
           {[-1, 1].map((s) => (
             <group key={s}>
-              <mesh material={mat.horn} position={[s * 0.42, 0.42, 0.55]} rotation={[1.15, 0, s * -0.35]}>
+              <mesh material={mat.horn} position={[s * 0.42, 0.42, 0.55]} rotation={[1.15, 0, s * -0.35]} scale={[1, horn, 1]}>
                 <coneGeometry args={[0.15, 1.4, 5]} />
               </mesh>
-              <mesh material={mat.horn} position={[s * 0.62, 0.12, 0.35]} rotation={[1.3, 0, s * -0.9]}>
+              <mesh material={mat.horn} position={[s * 0.62, 0.12, 0.35]} rotation={[1.3, 0, s * -0.9]} scale={[1, horn, 1]}>
                 <coneGeometry args={[0.09, 0.7, 4]} />
               </mesh>
+              {look.twinHorns && (
+                <mesh material={mat.horn} position={[s * 0.25, 0.5, -0.1]} rotation={[0.7, 0, s * -0.2]} scale={[1, horn, 1]}>
+                  <coneGeometry args={[0.1, 0.9, 5]} />
+                </mesh>
+              )}
               <mesh material={mat.eye} position={[s * 0.5, 0.15, -0.45]} scale={[0.6, 0.45, 1]}>
                 <sphereGeometry args={[0.15, 8, 6]} />
               </mesh>
@@ -265,26 +297,34 @@ export function DragonModel({ scale = 1 }: { scale?: number }) {
         </group>
       </group>
 
-      {/* tail */}
       <group position={[0, 0.05, 2.4]}>{tailChain}</group>
 
-      {/* wings */}
-      <Wing side={1} wingRef={rightWing} />
-      <Wing side={-1} wingRef={leftWing} />
+      <Wing side={1} wingRef={rightWing} mats={mat} span={look.wingspan} />
+      <Wing side={-1} wingRef={leftWing} mats={mat} span={look.wingspan} />
 
-      {/* tucked legs */}
+      {/* legs: pivot at the hip, swing forward to tuck */}
       {[
-        [-0.8, -0.95, -1.6],
-        [0.8, -0.95, -1.6],
-        [-0.85, -0.9, 1.4],
-        [0.85, -0.9, 1.4],
+        [-0.85, -0.6, -1.6],
+        [0.85, -0.6, -1.6],
+        [-0.9, -0.55, 1.4],
+        [0.9, -0.55, 1.4],
       ].map((p, i) => (
-        <group key={i} position={p as [number, number, number]} rotation={[0.9, 0, 0]}>
-          <mesh material={mat.body} scale={[0.32, 0.65, 0.32]}>
+        <group
+          key={i}
+          ref={(el) => {
+            legs.current[i] = el
+          }}
+          position={p as [number, number, number]}
+          rotation={[0.9, 0, 0]}
+        >
+          <mesh material={mat.body} position={[0, -0.6, 0]} scale={[0.36, 0.75, 0.38]}>
             <icosahedronGeometry args={[1, 0]} />
           </mesh>
-          <mesh material={mat.claw} position={[0, -0.7, 0]}>
-            <coneGeometry args={[0.18, 0.4, 4]} />
+          <mesh material={mat.body} position={[0, -1.35, 0.05]} scale={[0.22, 0.5, 0.24]}>
+            <icosahedronGeometry args={[1, 0]} />
+          </mesh>
+          <mesh material={mat.claw} position={[0, -1.72, -0.15]} rotation={[-Math.PI / 2, 0, 0]}>
+            <coneGeometry args={[0.2, 0.45, 4]} />
           </mesh>
         </group>
       ))}

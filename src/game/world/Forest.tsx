@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { terrainHeight, ISLAND_RADIUS } from './terrainHeight'
+import { NEST } from './worldSpots'
 
 const COUNT = 2600
 
@@ -20,6 +21,8 @@ export function Forest() {
       const z = Math.sin(a) * d
       const y = terrainHeight(x, z)
       if (y < 12 || y > 140) continue
+      // keep a clearing around the nest so the home base reads clearly
+      if (Math.hypot(x - NEST[0], z - NEST[2]) < 38) continue
       // slope check — no trees on cliffs
       const dx = terrainHeight(x + 4, z) - y
       const dz = terrainHeight(x, z + 4) - y

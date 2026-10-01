@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { performAction } from '../interaction'
+import { useGame } from '../../store/gameStore'
 
 /**
  * Mutable input state read every frame by the flight system.
@@ -49,7 +51,16 @@ export function readFlap() {
 export function useKeyboard() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.code === 'Space') e.preventDefault()
+      // typing in a text field (e.g. naming a dragon) must not steer the game
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return
+      if (e.code === 'Space' || e.code === 'Tab') e.preventDefault()
+      if (!e.repeat) {
+        const g = useGame.getState()
+        if (e.code === 'KeyE' && g.phase === 'playing' && !g.panel) performAction()
+        if ((e.code === 'KeyI' || e.code === 'Tab') && g.phase === 'playing') g.openPanel(g.panel === 'dragons' ? null : 'dragons')
+        if (e.code === 'Escape' && g.panel) g.openPanel(null)
+      }
       keys.add(e.code)
       recompute()
     }

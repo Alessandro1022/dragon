@@ -16,6 +16,8 @@ export const flight = {
   boosting: false,
   flapping: false,
   grounded: false,
+  /** seconds of forced climb after mounting */
+  takeoff: 0,
 }
 
 export const FLIGHT = {
@@ -38,6 +40,7 @@ export const FLIGHT = {
 }
 
 export function resetFlight() {
+  flight.takeoff = 0
   flight.position.set(0, 140, 900)
   flight.velocity.set(0, 0, 0)
   flight.yaw = 0
@@ -45,4 +48,17 @@ export function resetFlight() {
   flight.bank = 0
   flight.speed = FLIGHT.cruiseSpeed
   flight.stamina = 1
+}
+
+/** Place the dragon standing on the ground (used on game start). */
+export function parkAt(x: number, groundY: number, z: number, yaw: number, standingHeight = 2.5) {
+  flight.position.set(x, groundY + standingHeight, z)
+  flight.yaw = yaw
+  flight.pitch = 0
+  flight.bank = 0
+  flight.speed = FLIGHT.minSpeed
+  flight.stamina = 1
+  flight.takeoff = 0
+  flight.boosting = false
+  flight.flapping = false
 }

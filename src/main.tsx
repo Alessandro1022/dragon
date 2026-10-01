@@ -8,3 +8,12 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// dev-only handle for debugging and automated playtests
+if (import.meta.env.DEV) {
+  Promise.all([import('./store/gameStore'), import('./game/player/playerState'), import('./game/dragon/flightState')]).then(
+    ([store, p, f]) => {
+      ;(window as unknown as Record<string, unknown>).__dragon = { useGame: store.useGame, player: p.player, flight: f.flight }
+    },
+  )
+}

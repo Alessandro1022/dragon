@@ -34,10 +34,10 @@ function Ring({ def, index }: { def: RingDef; index: number }) {
   const pos = useMemo(() => new THREE.Vector3(...def.position), [def])
 
   useFrame(({ clock }) => {
-    const { collected, collectRing } = useGame.getState()
+    const { collected, collectRing, mode } = useGame.getState()
     const done = collected.includes(def.id)
     const isNext = !done && collected.length === index
-    if (isNext && flight.position.distanceTo(pos) < RING_RADIUS + 2) {
+    if (isNext && mode === 'flying' && flight.position.distanceTo(pos) < RING_RADIUS + 2) {
       collectRing(def.id, COURSE.length)
     }
     if (ref.current) {
@@ -77,10 +77,10 @@ const arrowTarget = new THREE.Vector3()
 export function NextRingArrow() {
   const ref = useRef<THREE.Group>(null)
   useFrame(() => {
-    const { collected, phase } = useGame.getState()
+    const { collected, phase, mode } = useGame.getState()
     const next = COURSE[collected.length]
     if (!ref.current) return
-    ref.current.visible = phase === 'playing' && !!next
+    ref.current.visible = phase === 'playing' && mode === 'flying' && !!next
     if (!next) return
     ref.current.position.copy(flight.position).add(new THREE.Vector3(0, 7, 0))
     arrowTarget.set(...next.position)

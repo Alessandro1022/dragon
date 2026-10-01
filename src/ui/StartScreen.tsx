@@ -4,10 +4,11 @@ const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: co
 
 export function StartScreen() {
   const start = useGame((s) => s.start)
+  const hasProgress = useGame((s) => s.dragons.length > 1 || (s.nestEgg?.progress ?? 0) > 0)
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-between bg-gradient-to-b from-night/70 via-transparent to-night/85 px-4 pb-10 pt-[12vh] text-white">
       <div className="text-center">
-        <p className="rise text-xs font-semibold uppercase tracking-[0.45em] text-ember/90">Kapitel I · Första flygningen</p>
+        <p className="rise text-xs font-semibold uppercase tracking-[0.45em] text-ember/90">Kapitel I · Drakväktaren</p>
         <h1
           className="rise mt-3 font-display text-6xl font-extrabold tracking-[0.12em] text-transparent sm:text-8xl"
           style={{
@@ -21,7 +22,7 @@ export function StartScreen() {
           DRAGON
         </h1>
         <p className="rise mx-auto mt-4 max-w-md text-sm text-white/75 sm:text-base" style={{ animationDelay: '0.2s' }}>
-          Ta draken till himlen. Flyg genom alla tolv gyllene ringar runt ön så snabbt du kan.
+          Ett ägg väntar i nästet. Kläck det, föd upp din drake och ta Ember till himlen.
         </p>
       </div>
 
@@ -30,7 +31,7 @@ export function StartScreen() {
           onClick={start}
           className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-b from-ember to-ember-deep px-8 py-4 font-display text-lg font-extrabold tracking-[0.2em] text-night shadow-[0_10px_40px_rgb(194_65_12/0.55)] transition active:scale-[0.98]"
         >
-          <span className="relative z-10">FLYG</span>
+          <span className="relative z-10">{hasProgress ? 'FORTSÄTT' : 'SPELA'}</span>
           <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
         </button>
 
@@ -38,16 +39,18 @@ export function StartScreen() {
           {isTouch ? (
             <ul className="grid grid-cols-2 gap-2">
               <li><b className="text-white">Vänster spak</b> styr</li>
-              <li><b className="text-white">Flaxa</b> stig uppåt</li>
+              <li><b className="text-white">Guldknappen</b> agera</li>
               <li><b className="text-white">Boost</b> fart + eld</li>
-              <li><b className="text-white">Dyk</b> = mer fart</li>
+              <li><b className="text-white">Flaxa</b> stig uppåt</li>
             </ul>
           ) : (
             <ul className="grid grid-cols-2 gap-2">
-              <li><Key>W</Key><Key>S</Key> stig / dyk</li>
+              <li><Key>W</Key><Key>S</Key> fram / stig</li>
               <li><Key>A</Key><Key>D</Key> sväng</li>
-              <li><Key>Space</Key> flaxa</li>
-              <li><Key>Shift</Key> boost + eld</li>
+              <li><Key>Space</Key> hoppa / flaxa</li>
+              <li><Key>Shift</Key> spring / boost</li>
+              <li><Key>E</Key> kliv upp / landa</li>
+              <li><Key>I</Key> dina drakar</li>
             </ul>
           )}
         </div>
