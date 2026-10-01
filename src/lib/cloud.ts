@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { useGame, persistedSlice, type SaveData } from '../store/gameStore'
 import { breed, express, rarity, ELEMENTS, type Genome } from '../systems/genetics'
 import { uid, view, type DragonData } from '../systems/dragons'
+import { joinWorld, leaveWorld } from './realtime'
 
 /**
  * Online layer on top of the local game: accounts, cloud saves, the
@@ -59,6 +60,7 @@ async function handleSession(session: Session | null) {
   const s = useGame.getState()
   if (!session) {
     if (s.account) useGame.setState({ account: null, cloud: 'offline' })
+    leaveWorld()
     return
   }
   if (s.account?.userId === session.user.id) return
@@ -72,6 +74,7 @@ async function handleSession(session: Session | null) {
     await syncOnLogin(session.user.id)
     await claimEarnings()
     useGame.setState({ cloud: 'synced' })
+    joinWorld()
   } catch (e) {
     console.error(e)
     useGame.setState({ cloud: 'error' })
@@ -124,6 +127,7 @@ export async function signInWithGoogle() {
 export async function signOut() {
   if (!supabase) return
   await saveNow()
+  leaveWorld()
   await supabase.auth.signOut()
 }
 
@@ -135,6 +139,7 @@ export async function setUsername(name: string) {
   const { error } = await supabase.from('profiles').upsert({ id: s.account.userId, username: clean })
   if (error) return { error: error.code === '23505' ? 'Namnet är upptaget' : error.message }
   useGame.setState({ account: { ...s.account, username: clean } })
+  joinWorld()
   return { error: null }
 }
 

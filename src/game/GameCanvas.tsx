@@ -16,6 +16,7 @@ import { BanditCamp } from './world/BanditCamp'
 import { MissionMarker } from './world/MissionMarker'
 import { Guards } from './npc/Guards'
 import { Villagers } from './npc/Villagers'
+import { RemotePlayers } from './npc/RemotePlayers'
 import { Dragon } from './dragon/Dragon'
 import { Companion } from './dragon/Companion'
 import { Player } from './player/Player'
@@ -53,6 +54,7 @@ export function GameCanvas() {
         <BanditCamp />
         <Villagers />
         <Guards />
+        <RemotePlayers />
         <MissionMarker />
         <Rings />
         <NextRingArrow />

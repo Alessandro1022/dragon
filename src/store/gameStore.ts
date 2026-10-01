@@ -97,6 +97,7 @@ interface GameState {
   settings: Settings
   account: Account | null
   cloud: 'offline' | 'syncing' | 'synced' | 'error'
+  ridersOnline: number
 
   // actions
   start: () => void
@@ -216,6 +217,7 @@ export const useGame = create<GameState>()(
         settings: { quality: 'high', autoQuality: true, volume: 0.7, music: true, invertPitch: false },
         account: null,
         cloud: 'offline',
+        ridersOnline: 0,
         heat: 0,
         guardsClose: false,
         collected: [],

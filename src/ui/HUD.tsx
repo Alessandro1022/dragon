@@ -79,7 +79,19 @@ function TopRight() {
         <Wallet />
       </span>
       <WantedStars />
+      <RidersOnline />
       <StaminaBar />
+    </div>
+  )
+}
+
+function RidersOnline() {
+  const n = useGame((s) => s.ridersOnline)
+  if (n < 2) return null
+  return (
+    <div className="glass flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white/80">
+      <span className="h-2 w-2 rounded-full bg-[#4ade80] shadow-[0_0_8px_#4ade80]" />
+      {n} ryttare online
     </div>
   )
 }
