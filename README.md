@@ -10,6 +10,19 @@ npm install
 npm run dev
 ```
 
+## Online (Supabase)
+
+Spelet fungerar helt offline. För konton, molnsparning, topplista och Avelsbörsen:
+
+1. Skapa ett Supabase-projekt.
+2. Kör `supabase/migrations/001_dragon_online.sql` i SQL Editor.
+3. Authentication → URL Configuration: lägg till din Vercel-URL som Site URL och Redirect URL.
+   (Valfritt) Authentication → Providers → Google för Google-inloggning.
+4. Vercel → Settings → Environment Variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+5. Redeploya. Pausmenyn får då en Konto-sektion och nästet en Börsen-flik.
+
 ## Kontroller
 
 | Dator | Mobil | Handling |
@@ -51,4 +64,5 @@ src/
 - [x] Fas 4 – Draksten: stad, bybor, Hedda + 5 uppdrag, marknad, guld, kungligt kläckeri, heat 1–5 och Drakgardet
 - [x] Fas 5 (bas) – Eldsprut med partiklar, brinnande banditläger, vaktryttare som kan skjutas ner
 - [x] Dag/natt-cykel, minikarta, sparning i webbläsaren
-- [ ] Fas 6 – Online via Supabase: konton, molnsparning, avel mellan spelare, crews, handel
+- [x] Fas 6 (bas) – Supabase: konton (mejllänk/Google), molnsparning, global topplista, Avelsbörsen mellan spelare
+- [ ] Nästa: realtidsmultiplayer (flyga ihop), crews, servervaliderad ekonomi, riggade 3D-modeller

@@ -4,6 +4,7 @@ import { performAction } from '../game/interaction'
 import { view } from '../systems/dragons'
 import { DragonPortrait, Icon } from './components'
 import { Minimap } from './Minimap'
+import { Leaderboard } from './Leaderboard'
 import { objectiveText, missionTarget } from '../game/missionTarget'
 import { flight } from '../game/dragon/flightState'
 import { player } from '../game/player/playerState'
@@ -256,7 +257,8 @@ function CourseComplete() {
       <div className="glass rise w-full max-w-xs rounded-3xl p-6 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.35em] text-ember">Banan klar</p>
         <p className="mt-2 font-display text-5xl font-extrabold">{courseTime.toFixed(1)}s</p>
-        <p className="mt-2 text-sm text-white/70">{best === courseTime ? 'Nytt rekord!' : `Rekord: ${best?.toFixed(1)}s`} · +2 silverfisk, +40 XP</p>
+        <p className="mt-2 text-sm text-white/70">{best === courseTime ? 'Nytt rekord!' : `Rekord: ${best?.toFixed(1)}s`} · +25 guld, +2 silverfisk, +40 XP</p>
+        <Leaderboard time={courseTime} />
         <button
           onClick={resetCourse}
           className="mt-5 w-full rounded-xl bg-gradient-to-b from-ember to-ember-deep py-3 font-display font-extrabold tracking-[0.18em] text-night active:scale-[0.98]"

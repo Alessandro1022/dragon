@@ -4,6 +4,8 @@ import { incubationRate, INCUBATION_SECONDS } from '../game/Systems'
 import { dragonName } from '../systems/names'
 import { EggIcon, Sheet, Bar } from './components'
 import { BreedingTab } from './BreedingTab'
+import { StudExchange } from './StudExchange'
+import { online } from '../lib/supabase'
 
 export function NestPanel() {
   const egg = useGame((s) => s.nestEgg)
@@ -15,7 +17,12 @@ export function NestPanel() {
   const [rate, setRate] = useState(incubationRate())
   const lastWarm = useRef(0)
   const [pulse, setPulse] = useState(0)
-  const [tab, setTab] = useState<'egg' | 'breed'>('egg')
+  const [tab, setTab] = useState<'egg' | 'breed' | 'exchange'>('egg')
+  const tabs = [
+    ['egg', 'Ägget'],
+    ['breed', 'Avel'],
+    ...(online ? [['exchange', 'Börsen']] : []),
+  ] as [typeof tab, string][]
 
   useEffect(() => {
     const id = setInterval(() => setRate(incubationRate()), 500)
@@ -34,13 +41,8 @@ export function NestPanel() {
 
   return (
     <Sheet title="NÄSTET" onClose={() => openPanel(null)}>
-      <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-white/5 p-1">
-        {(
-          [
-            ['egg', 'Ägget'],
-            ['breed', 'Avel'],
-          ] as const
-        ).map(([id, label]) => (
+      <div className={`mb-5 grid gap-1 rounded-xl bg-white/5 p-1 ${tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {tabs.map(([id, label]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -50,7 +52,9 @@ export function NestPanel() {
           </button>
         ))}
       </div>
-      {tab === 'breed' ? (
+      {tab === 'exchange' ? (
+        <StudExchange />
+      ) : tab === 'breed' ? (
         <BreedingTab />
       ) : !egg ? (
         <div className="py-4 text-center">

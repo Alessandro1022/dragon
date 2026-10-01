@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useGame, type Quality } from '../store/gameStore'
 import { Sheet } from './components'
+import { AccountSection } from './AccountSection'
+import { online } from '../lib/supabase'
 
 const QUALITIES: [Quality, string][] = [
   ['low', 'Låg'],
@@ -22,6 +24,12 @@ export function SettingsPanel() {
       >
         FORTSÄTT
       </button>
+
+      {online && (
+        <Section title="Konto">
+          <AccountSection />
+        </Section>
+      )}
 
       <Section title="Grafik">
         <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/5 p-1">

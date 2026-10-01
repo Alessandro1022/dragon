@@ -46,6 +46,12 @@ export interface Prompt {
   action: 'mount' | 'dismount' | 'nest' | 'quest'
 }
 
+export interface Account {
+  userId: string
+  email: string | null
+  username: string | null
+}
+
 export interface ActiveMission {
   id: string
   baseline: number
@@ -89,6 +95,8 @@ interface GameState {
   royalEggDay: number
   day: number
   settings: Settings
+  account: Account | null
+  cloud: 'offline' | 'syncing' | 'synced' | 'error'
 
   // actions
   start: () => void
@@ -180,6 +188,7 @@ function initialProgress() {
 const updateDragon = (dragons: DragonData[], id: string, fn: (d: DragonData) => DragonData) =>
   dragons.map((d) => (d.id === id ? fn(d) : d))
 
+export type { GameState }
 export const useGame = create<GameState>()(
   persist(
     (set, get) => {
@@ -205,6 +214,8 @@ export const useGame = create<GameState>()(
         toasts: [],
         telemetry: { speed: 0, altitude: 0, stamina: 1, boosting: false },
         settings: { quality: 'high', autoQuality: true, volume: 0.7, music: true, invertPitch: false },
+        account: null,
+        cloud: 'offline',
         heat: 0,
         guardsClose: false,
         collected: [],
@@ -519,29 +530,35 @@ export const useGame = create<GameState>()(
       name: 'dragon-save-v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({
-        dragons: s.dragons,
-        activeDragonId: s.activeDragonId,
-        companionId: s.companionId,
-        nestEgg: s.nestEgg,
-        eggStash: s.eggStash,
-        hatchReady: s.hatchReady,
-        inventory: s.inventory,
-        foundWildEggs: s.foundWildEggs,
-        bestCourseTime: s.bestCourseTime,
-        gold: s.gold,
-        counters: s.counters,
-        activeMission: s.activeMission,
-        completedMissions: s.completedMissions,
-        royalEggDay: s.royalEggDay,
-        day: s.day,
-        settings: s.settings,
-      }),
+      partialize: (s) => persistedSlice(s),
       // older saves lack the newer fields — fill them from fresh defaults
       merge: (persisted, current) => ({ ...current, ...(persisted as object) }),
     },
   ),
 )
+
+/** Everything that is saved — locally and to the cloud. */
+export function persistedSlice(s: GameState) {
+  return {
+    dragons: s.dragons,
+    activeDragonId: s.activeDragonId,
+    companionId: s.companionId,
+    nestEgg: s.nestEgg,
+    eggStash: s.eggStash,
+    hatchReady: s.hatchReady,
+    inventory: s.inventory,
+    foundWildEggs: s.foundWildEggs,
+    bestCourseTime: s.bestCourseTime,
+    gold: s.gold,
+    counters: s.counters,
+    activeMission: s.activeMission,
+    completedMissions: s.completedMissions,
+    royalEggDay: s.royalEggDay,
+    day: s.day,
+    settings: s.settings,
+  }
+}
+export type SaveData = ReturnType<typeof persistedSlice>
 
 /** Convenience selectors */
 export const selectActive = (s: GameState) => s.dragons.find((d) => d.id === s.activeDragonId) ?? null
